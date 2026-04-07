@@ -17,13 +17,17 @@ import type { ContractStatus, InstallmentStatus } from '../../types';
 import dayjs from 'dayjs';
 
 const statusColors: Record<ContractStatus, 'success' | 'default' | 'warning' | 'info' | 'error'> = {
-    ACTIVE: 'success', DRAFT: 'default', PENDING: 'warning',
-    COMPLETED: 'info', CANCELLED: 'error', OVERDUE: 'error',
+    active: 'success',
+    draft: 'default',
+    expired: 'warning',
+    terminated: 'error',
 };
 
 const installmentColors: Record<InstallmentStatus, 'success' | 'default' | 'warning' | 'info' | 'error'> = {
-    PAID: 'success', PENDING: 'default', DUE: 'warning',
-    OVERDUE: 'error', PARTIAL: 'info',
+    paid: 'success',
+    pending: 'default',
+    overdue: 'warning',
+    cancelled: 'error',
 };
 
 export default function ContractDetailPage() {

@@ -10,65 +10,64 @@ export default function GoogleCallbackPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        try {
-            const token = searchParams.get('accessToken') || searchParams.get('token');
-            const refreshToken = searchParams.get('refreshToken');
-            const userParam = searchParams.get('user');
-            const errorParam = searchParams.get('error');
+        const handleGoogleCallback = async () => {
+            try {
+                const token = searchParams.get('accessToken') || searchParams.get('token');
+                const refreshToken = searchParams.get('refreshToken');
+                const userParam = searchParams.get('user');
+                const errorParam = searchParams.get('error');
 
-            // Agar error bo'lsa
-            if (errorParam) {
-                setError('Google authentication failed: ' + errorParam);
-                setTimeout(() => {
-                    navigate('/login');
-                }, 3000);
-                return;
-            }
-
-            // Token'lar mavjud bo'lsa
-            if (token && refreshToken && userParam) {
-                try {
-                    // User data'ni decode qilish
-                    const userData = JSON.parse(decodeURIComponent(userParam));
-
-                    // localStorage'ga saqlash
-                    localStorage.setItem('accessToken', token);
-                    localStorage.setItem('refreshToken', refreshToken);
-                    localStorage.setItem('user', JSON.stringify(userData));
-
-                    // Zustand store'ga ham saqlash
-                    setAuth(userData, token, refreshToken);
-
-                    // Dashboardga redirect
+                // Agar error bo'lsa
+                if (errorParam) {
+                    setError('Google authentication failed: ' + errorParam);
                     setTimeout(() => {
-                        navigate('/dashboard');
-                    }, 1000);
-                } catch (parseError) {
-                    console.error('User data parse error:', parseError);
-                    setError('Authentication ma\'lumotlari noto\'g\'ri');
+                        navigate('/login');
+                    }, 3000);
+                    return;
+                }
+
+                // Token'lar mavjud bo'lsa
+                if (token && refreshToken && userParam) {
+                    try {
+                        // User data'ni decode qilish
+                        const userData = JSON.parse(decodeURIComponent(userParam));
+
+                        // Zustand store'ga saqlash (localStorage middleware avtomatik ishlaydi)
+                        setAuth(userData, token, refreshToken);
+
+                        // Dashboardga redirect
+                        setTimeout(() => {
+                            navigate('/dashboard');
+                        }, 1500);
+                    } catch (parseError) {
+                        console.error('User data parse error:', parseError);
+                        setError('Authentication ma\'lumotlari noto\'g\'ri');
+                        setTimeout(() => {
+                            navigate('/login');
+                        }, 3000);
+                    }
+                } else {
+                    // Token'lar yo'q
+                    setError('Token ma\'lumotlari topilmadi');
+                    console.error('Missing params:', {
+                        hasToken: !!token,
+                        hasRefreshToken: !!refreshToken,
+                        hasUser: !!userParam
+                    });
                     setTimeout(() => {
                         navigate('/login');
                     }, 3000);
                 }
-            } else {
-                // Token'lar yo'q
-                setError('Token ma\'lumotlari topilmadi');
-                console.error('Missing params:', {
-                    hasToken: !!token,
-                    hasRefreshToken: !!refreshToken,
-                    hasUser: !!userParam
-                });
+            } catch (err) {
+                console.error('GoogleCallbackPage error:', err);
+                setError('Noma\'lum xatolik yuz berdi');
                 setTimeout(() => {
                     navigate('/login');
                 }, 3000);
             }
-        } catch (err) {
-            console.error('GoogleCallbackPage error:', err);
-            setError('Noma\'lum xatolik yuz berdi');
-            setTimeout(() => {
-                navigate('/login');
-            }, 3000);
-        }
+        };
+
+        handleGoogleCallback();
     }, [searchParams, setAuth, navigate]);
 
     if (error) {

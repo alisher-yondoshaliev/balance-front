@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Box, Typography, TextField, Button, Alert, CircularProgress, Divider } from '@mui/material';
+import {
+    Box,
+    Typography,
+    TextField,
+    Button,
+    Alert,
+    CircularProgress,
+    Stack,
+    useTheme,
+    useMediaQuery,
+} from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AxiosError } from 'axios';
 import { authApi } from '../../api';
 import { useAuthStore } from '../../store/auth.store';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 
 const schema = z.object({
     fullName: z.string().min(3, 'Ism kamida 3 ta belgi'),
@@ -26,6 +37,8 @@ export default function RegisterPage() {
     const { setAuth } = useAuthStore();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
@@ -51,77 +64,329 @@ export default function RegisterPage() {
     };
 
     return (
-        <Box>
-            <Typography variant="h5" fontWeight="bold" mb={1}>
-                Ma'lumotlarni kiriting
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={3}>
-                Hisobingizni yarating
-            </Typography>
-
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <span>{error}</span>
-                        {error.includes('ro\'yxatdan o\'tgan') && (
-                            <Link to="/login" style={{ color: '#d32f2f', fontWeight: 'bold', textDecoration: 'underline' }}>
-                                Kirish
-                            </Link>
-                        )}
-                    </Box>
-                </Alert>
-            )}
-
-            <form onSubmit={handleSubmit(onSubmit)}>
-                <TextField
-                    fullWidth
-                    label="To'liq ism"
-                    {...register('fullName')}
-                    error={!!errors.fullName}
-                    helperText={errors.fullName?.message}
-                    sx={{ mb: 2 }}
-                />
-                <TextField
-                    fullWidth
-                    label="Parol"
-                    type="password"
-                    {...register('password')}
-                    error={!!errors.password}
-                    helperText={errors.password?.message}
-                    sx={{ mb: 2 }}
-                />
-                <TextField
-                    fullWidth
-                    label="Parolni tasdiqlang"
-                    type="password"
-                    {...register('confirmPassword')}
-                    error={!!errors.confirmPassword}
-                    helperText={errors.confirmPassword?.message}
-                    sx={{ mb: 3 }}
-                />
-                <Button fullWidth variant="contained" size="large" type="submit" disabled={loading}>
-                    {loading ? <CircularProgress size={24} /> : 'Ro\'yxatdan o\'tish'}
-                </Button>
-            </form>
-
-            <Divider sx={{ my: 3 }}>yoki</Divider>
-
-            <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                onClick={() => (window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`)}
-                sx={{ mb: 2 }}
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#fff' }}>
+            {/* Left Side - Form */}
+            <Box
+                sx={{
+                    flex: isMobile ? 1 : '0 0 50%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    p: isMobile ? 2 : 6,
+                    maxWidth: 'none',
+                    paddingLeft: isMobile ? 2 : 8,
+                    paddingRight: isMobile ? 2 : 8,
+                }}
             >
-                Google bilan davom etish
-            </Button>
+                {/* Back Button */}
+                <Button
+                    startIcon={<ArrowBackIcon />}
+                    onClick={() => navigate('/')}
+                    sx={{
+                        alignSelf: 'flex-start',
+                        mb: 4,
+                        color: '#667eea',
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        '&:hover': {
+                            bgcolor: '#f5f5f5',
+                        },
+                    }}
+                >
+                    Orqaga
+                </Button>
 
-            <Typography variant="body2" textAlign="center" mt={2}>
-                Akkauntingiz bor ekan?{' '}
-                <Link to="/login" style={{ color: '#1976d2', fontWeight: 'bold', textDecoration: 'none' }}>
-                    Kirish
-                </Link>
-            </Typography>
+                {/* Title */}
+                <Typography
+                    variant="h5"
+                    sx={{
+                        fontWeight: 800,
+                        mb: 1,
+                        color: '#2c3e50',
+                    }}
+                >
+                    Ma'lumotlarni kiriting
+                </Typography>
+                <Typography
+                    variant="body1"
+                    color="textSecondary"
+                    sx={{
+                        mb: 3,
+                        fontSize: '1rem',
+                    }}
+                >
+                    Yangi hisobingizni yarating
+                </Typography>
+
+                {/* Error Alert */}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <span>{error}</span>
+                            {error.includes('ro\'yxatdan o\'tgan') && (
+                                <Link to="/login" style={{ color: '#d32f2f', fontWeight: 'bold', textDecoration: 'underline' }}>
+                                    Kirish
+                                </Link>
+                            )}
+                        </Box>
+                    </Alert>
+                )}
+
+                {/* Form */}
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    {/* Full Name Field */}
+                    <Box sx={{ mb: 2 }}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                                fontWeight: 600,
+                                mb: 0.8,
+                                color: '#2c3e50',
+                            }}
+                        >
+                            To'liq ism
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            placeholder="Ismingizni kiriting"
+                            {...register('fullName')}
+                            error={!!errors.fullName}
+                            helperText={errors.fullName?.message}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                    fontWeight: 500,
+                                },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Password Field */}
+                    <Box sx={{ mb: 2 }}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                                fontWeight: 600,
+                                mb: 0.8,
+                                color: '#2c3e50',
+                            }}
+                        >
+                            Parol
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            type="password"
+                            placeholder="••••••••"
+                            {...register('password')}
+                            error={!!errors.password}
+                            helperText={errors.password?.message}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                    fontWeight: 500,
+                                },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Confirm Password Field */}
+                    <Box sx={{ mb: 3 }}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                                fontWeight: 600,
+                                mb: 0.8,
+                                color: '#2c3e50',
+                            }}
+                        >
+                            Parolni tasdiqlang
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            type="password"
+                            placeholder="••••••••"
+                            {...register('confirmPassword')}
+                            error={!!errors.confirmPassword}
+                            helperText={errors.confirmPassword?.message}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1,
+                                    fontWeight: 500,
+                                },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Sign Up Button */}
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        size="large"
+                        type="submit"
+                        disabled={loading}
+                        sx={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            py: 1.5,
+                            borderRadius: 1,
+                            mb: 2,
+                            '&:hover': {
+                                opacity: 0.9,
+                            },
+                        }}
+                    >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Ro\'yxatdan o\'tish'}
+                    </Button>
+                </form>
+
+                {/* Divider */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mb: 2,
+                    }}
+                >
+                    <Box sx={{ flex: 1, height: '1px', bgcolor: '#e0e0e0' }} />
+                    <Typography variant="body2" color="textSecondary" sx={{ px: 1.5 }}>
+                        yoki
+                    </Typography>
+                    <Box sx={{ flex: 1, height: '1px', bgcolor: '#e0e0e0' }} />
+                </Box>
+
+                {/* Google Sign Up */}
+                <Button
+                    fullWidth
+                    variant="outlined"
+                    size="large"
+                    onClick={() => (window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`)}
+                    sx={{
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        py: 1.5,
+                        borderRadius: 1,
+                        borderColor: '#e0e0e0',
+                        color: '#2c3e50',
+                        mb: 3,
+                        '&:hover': {
+                            bgcolor: '#f5f5f5',
+                            borderColor: '#e0e0e0',
+                        },
+                    }}
+                >
+                    <Box
+                        component="img"
+                        src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEwIDAgQzQuNDggMCAwIDQuNDggMCAxMEMwIDE0Ljk3IDMuMjUgMTkuMDIgNy43NyAxOS45NEw3Ljc3IDEyLjY5SDE1Ljg4QzE1LjM4IDE3Ljc0IDEyLjk4IDIwIDEwIDIwQzUuNDIgMjAgMiAxNi41OCAyIDEyQzIgNy40MiA1LjQyIDQgMTAgNEMxMS44IDQgMTMuNDcgNC42NSAxNC43NyA1LjcyTDE3LjkxIDIuNjNDMTYuMDIgMC45MSAxMy41IDAgMTAgMFoiIGZpbGw9IiMxRjJBRjAiLz4KPC9zdmc+"
+                        sx={{ mr: 1, width: 20, height: 20 }}
+                    />
+                    Google bilan davom etish
+                </Button>
+
+                {/* Sign In Link */}
+                <Typography
+                    variant="body2"
+                    textAlign="center"
+                    sx={{
+                        color: '#2c3e50',
+                    }}
+                >
+                    Akkauntingiz bor ekan?{' '}
+                    <Link
+                        to="/login"
+                        style={{
+                            color: '#667eea',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                        }}
+                    >
+                        Kirish
+                    </Link>
+                </Typography>
+            </Box>
+
+            {/* Right Side - Illustration */}
+            {!isMobile && (
+                <Box
+                    sx={{
+                        flex: 1,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            width: '400px',
+                            height: '400px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            top: '-100px',
+                            right: '-50px',
+                        },
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            width: '300px',
+                            height: '300px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            bottom: '-50px',
+                            left: '-100px',
+                        },
+                    }}
+                >
+                    <Stack
+                        sx={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                width: '300px',
+                                height: '300px',
+                                borderRadius: '50%',
+                                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 3,
+                                backdropFilter: 'blur(10px)',
+                            }}
+                        >
+                            <Typography
+                                variant="h1"
+                                sx={{
+                                    color: 'white',
+                                    fontWeight: 800,
+                                    fontSize: '100px',
+                                    opacity: 0.9,
+                                }}
+                            >
+                                ✓
+                            </Typography>
+                        </Box>
+                        <Typography
+                            variant="h5"
+                            sx={{
+                                color: 'white',
+                                fontWeight: 700,
+                                maxWidth: '300px',
+                            }}
+                        >
+                            Siz xush kelibsiz!
+                        </Typography>
+                    </Stack>
+                </Box>
+            )}
         </Box>
     );
 }
