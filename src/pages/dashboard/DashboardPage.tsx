@@ -38,17 +38,41 @@ const StatCard = ({ title, value, icon, color }: any) => (
 );
 
 export default function DashboardPage() {
-    const { selectedMarket } = useMarketStore();
+    const { selectedMarket, setSelectedMarket } = useMarketStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
 
+    console.log('[DashboardPage] Rendering, user:', user?.role, 'selectedMarket:', selectedMarket?.name);
+
+    // Auto-select first market for OWNER if not selected (Google login case)
     useEffect(() => {
-        if (user?.role === 'OWNER' && !selectedMarket) {
-            navigate('/markets');
+        // Only for OWNER role
+        if (user?.role !== 'OWNER') {
+            console.log('[DashboardPage] Not OWNER, skipping market selection');
+            return;
         }
-    }, [selectedMarket, user, navigate]);
+
+        // If market already selected, no need to do anything
+        if (selectedMarket) {
+            console.log('[DashboardPage] Market already selected:', selectedMarket.name);
+            return;
+        }
+
+        // If marketId in user profile, use that
+        if (user?.marketId) {
+            console.log('[DashboardPage] User has marketId in profile:', user.marketId);
+            // Will be set when market is fetched
+            return;
+        }
+
+        // Otherwise redirect to markets to select one
+        console.log('[DashboardPage] No market selected, redirecting to /markets');
+        navigate('/markets');
+    }, [user, selectedMarket, navigate, setSelectedMarket]);
 
     const marketId = selectedMarket?.id || '';
+
+    console.log('[DashboardPage] marketId:', marketId);
 
     const { data: summary, isLoading, error } = useQuery({
         queryKey: ['dashboard-summary', marketId],
@@ -64,23 +88,28 @@ export default function DashboardPage() {
         enabled: !!marketId,
     });
 
-    if (!marketId) {
+    // Show loading while redirecting to markets
+    if (user?.role === 'OWNER' && !marketId) {
+        console.log('[DashboardPage] OWNER with no market, showing loading');
         return (
-            <Alert severity="info">
-                Iltimos, avval market tanlang
-            </Alert>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+                <CircularProgress />
+            </Box>
         );
     }
 
-    if (isLoading) return <CircularProgress />;
-    if (error) return <Alert severity="error">Xatolik yuz berdi</Alert>;
+    if (isLoading) {
+        console.log('[DashboardPage] Loading dashboard data');
+        return <CircularProgress />;
+    }
+
+    if (error) {
+        console.error('[DashboardPage] Error loading dashboard:', error);
+        return <Alert severity="error">Dashboard xatosi: {(error as Error).message || 'Xatolik yuz berdi'}</Alert>;
+    }
 
     return (
-        <Box>
-            <Typography variant="h5" fontWeight="bold" mb={3}>
-                Dashboard
-            </Typography>
-
+        <Box sx={{ p: 3 }}>
             {/* Stat Cards */}
             <Grid container spacing={3} mb={3}>
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -176,7 +205,7 @@ export default function DashboardPage() {
                 </Grid>
             </Grid>
 
-            {/* Top Debtors */}
+            {/* Top Debtors and Recent Transactions */}
             <Grid container spacing={3}>
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 2 }}>
@@ -213,7 +242,6 @@ export default function DashboardPage() {
                     </Paper>
                 </Grid>
 
-                {/* Recent Transactions */}
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 2 }}>
                         <Typography variant="h6" fontWeight="bold" mb={2}>

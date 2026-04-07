@@ -1,43 +1,41 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import { useAuthStore } from '../store/auth.store';
-import { authApi } from '../api/endpoints/auth.api';
-import { isSuperAdmin } from '../utils/roles';
-import { useMarketStore } from '../store/market.store';
+import { authService } from '../services/endpoints/auth';
+import { AxiosError } from 'axios';
 
 /**
- * Hook to initialize auth on app load
- * - Verify accessToken is still valid
- * - Refresh user data from /api/auth/me
- * - Initialize market for OWNER users if needed
+ * Initialize auth on app load
+ * Checks if user has valid token and restores session
  */
 export function useAuthInit() {
-    const { isAuthenticated, setUser, logout } = useAuthStore();
-    const { selectedMarket, clearMarket } = useMarketStore();
+    const { setAuth, setIsInitializing, logout, accessToken } = useAuthStore();
 
-    useEffect(() => {
-        const initAuth = async () => {
-            if (!isAuthenticated) return;
+    const initAuth = useCallback(async () => {
+        setIsInitializing(true);
+        try {
+            // If no token, skip init
+            if (!accessToken) {
+                setIsInitializing(false);
+                return;
+            }
 
-            try {
-                // Fetch fresh user data from server
-                const response = await authApi.getMe();
-                const user = response.data.data || response.data;
+            // Fetch current user with existing token
+            const user = await authService.getCurrentUser();
+            const { refreshToken } = useAuthStore.getState();
 
-                // Update user in store
-                setUser(user);
-
-                // Clear market selection for SUPERADMIN
-                if (isSuperAdmin(user.role)) {
-                    clearMarket();
-                }
-                // For OWNER, keep the selected market if available
-                // Otherwise it will be selected when they go to markets page
-            } catch (error) {
-                console.error('Auth init failed:', error);
+            // Update user in store but keep existing tokens
+            setAuth(user, accessToken, refreshToken || undefined);
+        } catch (error) {
+            const err = error as AxiosError;
+            if (err.response?.status === 401) {
+                // Token expired or invalid
                 logout();
             }
-        };
+            console.error('Auth init error:', error);
+        } finally {
+            setIsInitializing(false);
+        }
+    }, [accessToken, setAuth, setIsInitializing, logout]);
 
-        initAuth();
-    }, [isAuthenticated, setUser, logout, clearMarket]);
+    return { initAuth };
 }

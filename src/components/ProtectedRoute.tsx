@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import type { Role } from '../types';
 
 interface RoleBasedRouteProps {
-    children: React.ReactNode;
+    children: ReactNode;
     allowedRoles: Role[];
 }
 
@@ -22,7 +23,7 @@ export function RoleBasedRoute({ children, allowedRoles }: RoleBasedRouteProps) 
 }
 
 interface PrivateRouteProps {
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
 export function PrivateRoute({ children }: PrivateRouteProps) {
@@ -31,7 +32,7 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
 }
 
 interface PublicRouteProps {
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
 export function PublicRoute({ children }: PublicRouteProps) {

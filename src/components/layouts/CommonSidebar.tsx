@@ -53,7 +53,9 @@ export default function CommonSidebar({ open, menuItems }: CommonSidebarProps) {
                                     },
                                 }}
                             >
-                                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                                <ListItemIcon sx={{ minWidth: 40 }}>
+                                    {typeof item.icon === 'function' ? <item.icon /> : item.icon}
+                                </ListItemIcon>
                                 <ListItemText primary={item.title} />
                             </ListItemButton>
                         </ListItem>

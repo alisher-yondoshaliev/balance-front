@@ -22,11 +22,8 @@ import { isSuperAdmin } from '../../utils/roles';
 import type { Market, MarketStatus } from '../../types';
 
 const statusColors: Record<MarketStatus, 'success' | 'warning' | 'error' | 'default'> = {
-    ACTIVE: 'success',
-    PENDING: 'warning',
-    BLOCKED: 'error',
-    INACTIVE: 'default',
-    EXPIRED: 'error',
+    active: 'success',
+    inactive: 'error',
 };
 
 export default function MarketsPage() {
@@ -36,13 +33,11 @@ export default function MarketsPage() {
     const [open, setOpen] = useState(false);
     const [editItem, setEditItem] = useState<Market | null>(null);
 
-    // Fetch markets based on role
+    // Fetch markets - only own markets
     const { data: markets, isLoading } = useQuery({
         queryKey: ['markets'],
         queryFn: () =>
-            isSuperAdmin(user?.role)
-                ? marketsApi.getAll().then((r) => r.data)
-                : marketsApi.getMyMarkets().then((r) => r.data),
+            marketsApi.getMyMarkets().then((r) => r.data),
     });
 
     const { register, handleSubmit, reset, setValue } = useForm<CreateMarketInput>();
@@ -65,12 +60,6 @@ export default function MarketsPage() {
             setEditItem(null);
             reset();
         },
-    });
-
-    const updateStatusMutation = useMutation({
-        mutationFn: ({ id, status }: { id: string; status: string }) =>
-            marketsApi.updateStatus(id, status),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['markets'] }),
     });
 
     const deleteMutation = useMutation({
@@ -232,37 +221,5 @@ export default function MarketsPage() {
                 </form>
             </Dialog>
         </Box>
-    );
-}
-                                    </IconButton >
-                                </CardActions >
-                            )}
-                        </Card >
-                    </Grid >
-                ))}
-            </Grid >
-
-    {/* Create/Edit Dialog */ }
-    < Dialog open = { open } onClose = { handleClose } maxWidth = "sm" fullWidth >
-                <DialogTitle>{editItem ? 'Market tahrirlash' : 'Yangi market'}</DialogTitle>
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <DialogContent>
-                        <TextField fullWidth label="Nomi" {...register('name')} sx={{ mb: 2 }} required />
-                        <TextField fullWidth label="Manzil" {...register('address')} sx={{ mb: 2 }} />
-                        <TextField fullWidth label="Telefon" {...register('phone')} />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleClose}>Bekor qilish</Button>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={createMutation.isPending || updateMutation.isPending}
-                        >
-                            {editItem ? 'Saqlash' : 'Yaratish'}
-                        </Button>
-                    </DialogActions>
-                </form>
-            </Dialog >
-        </Box >
     );
 }

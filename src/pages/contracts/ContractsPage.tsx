@@ -14,8 +14,10 @@ import type { Contract, ContractStatus } from '../../types';
 import dayjs from 'dayjs';
 
 const statusColors: Record<ContractStatus, 'success' | 'default' | 'warning' | 'info' | 'error'> = {
-    ACTIVE: 'success', DRAFT: 'default', PENDING: 'warning',
-    COMPLETED: 'info', CANCELLED: 'error', OVERDUE: 'error',
+    active: 'success',
+    draft: 'default',
+    expired: 'warning',
+    terminated: 'error',
 };
 
 export default function ContractsPage() {

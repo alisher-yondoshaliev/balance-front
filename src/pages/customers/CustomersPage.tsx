@@ -72,10 +72,10 @@ export default function CustomersPage() {
     const handleEdit = (customer: Customer) => {
         setEditItem(customer);
         setValue('fullName', customer.fullName);
-        setValue('phone', customer.phone);
-        setValue('address', customer.address);
-        setValue('passportSeria', customer.passportSeria);
-        setValue('note', customer.note);
+        if (customer.phone) setValue('phone', customer.phone);
+        if (customer.address) setValue('address', customer.address);
+        if (customer.passportSeria) setValue('passportSeria', customer.passportSeria);
+        if (customer.note) setValue('note', customer.note);
         setOpen(true);
     };
 
@@ -87,7 +87,7 @@ export default function CustomersPage() {
 
     const filtered = customers?.filter((c) =>
         c.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        c.phone.includes(search),
+        (c.phone?.includes(search) ?? false),
     );
 
     if (!marketId) return <Alert severity="info">Iltimos, market tanlang</Alert>;
