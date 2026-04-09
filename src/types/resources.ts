@@ -31,6 +31,43 @@ export interface UserResource {
     updatedAt: string;
 }
 
+// Market User interface (from GET /api/markets/:id/users endpoint)
+export interface MarketUser {
+    id: number;
+    fullName: string;
+    phone?: string;
+    email: string;
+    role: string;
+    status: 'active' | 'inactive';
+    marketId: number;
+    createdAt: string;
+}
+
+// Pagination meta from backend
+export interface PaginationMeta {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+}
+
+// Market users response from backend
+export interface MarketUsersResponse {
+    data: MarketUser[];
+    meta: PaginationMeta;
+}
+
+// Market users query parameters
+export interface MarketUsersQueryParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'active' | 'inactive';
+    role?: string;
+    sortBy?: string;
+    order?: 'asc' | 'desc';
+}
+
 // Customer interface
 export interface Customer {
     id: string;

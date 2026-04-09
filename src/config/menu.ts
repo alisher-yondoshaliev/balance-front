@@ -44,9 +44,9 @@ export const MENU_ITEMS: MenuItemConfig[] = [
     },
     {
         id: 'users',
-        label: 'Xodimlar',
+        label: 'Foydalanuvchilar',
         icon: PeopleIcon,
-        path: '/employees',
+        path: '/users',
         requiredRoles: ['SUPERADMIN', 'OWNER', 'ADMIN'],
     },
     {
