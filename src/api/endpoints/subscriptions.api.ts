@@ -1,15 +1,45 @@
 import api from '../axios';
 
+export interface SubscriptionPlan {
+    id: string;
+    name: string;
+    price: number;
+    features: string[];
+}
+
+export interface CurrentSubscription {
+    id: string;
+    planId: string;
+    plan: SubscriptionPlan;
+    status: 'active' | 'inactive' | 'expired';
+    startDate: string;
+    endDate: string;
+    renewalDate: string;
+}
+
+export interface SubscriptionHistory {
+    id: string;
+    planId: string;
+    plan: SubscriptionPlan;
+    status: 'active' | 'inactive' | 'expired' | 'cancelled';
+    startDate: string;
+    endDate: string;
+    amount: number;
+    paymentDate: string;
+}
+
+export interface PaymentInput {
+    planId: string;
+    paymentMethod: string;
+}
+
 export const subscriptionsApi = {
-    getActiveSubscriptions: (marketId: string) =>
-        api.get(`/markets/${marketId}/subscriptions`),
+    getCurrent: () =>
+        api.get<CurrentSubscription>('/subscriptions/current'),
 
-    getSubscriptionHistory: (marketId: string) =>
-        api.get(`/markets/${marketId}/subscriptions/history`),
+    getHistory: () =>
+        api.get<{ items: SubscriptionHistory[] }>('/subscriptions/history'),
 
-    renewSubscription: (marketId: string, data: { planId: string; paymentMethod: string }) =>
-        api.post(`/markets/${marketId}/subscriptions/renew`, data),
-
-    cancelSubscription: (marketId: string) =>
-        api.post(`/markets/${marketId}/subscriptions/cancel`, {}),
+    pay: (data: PaymentInput) =>
+        api.post('/subscriptions/pay', data),
 };

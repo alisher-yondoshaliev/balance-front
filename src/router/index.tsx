@@ -159,22 +159,12 @@ export default function AppRouter() {
                     }
                 />
 
-                {/* Employees by Selected Market - Available for SUPERADMIN, OWNER, ADMIN */}
-                <Route
-                    path="/employees"
-                    element={
-                        <RoleBasedRoute allowedRoles={['SUPERADMIN', 'OWNER', 'ADMIN']}>
-                            <EmployeesPage />
-                        </RoleBasedRoute>
-                    }
-                />
-
                 {/* System Users - Available for SUPERADMIN, OWNER */}
                 <Route
                     path="/users"
                     element={
-                        <RoleBasedRoute allowedRoles={['SUPERADMIN', 'OWNER']}>
-                            <UsersPage />
+                        <RoleBasedRoute allowedRoles={['SUPERADMIN', 'OWNER', 'ADMIN']}>
+                            <EmployeesPage />
                         </RoleBasedRoute>
                     }
                 />

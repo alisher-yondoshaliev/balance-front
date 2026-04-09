@@ -21,7 +21,7 @@ export interface MenuItem {
 export const OWNER_MENU: MenuItem[] = [
     { title: 'Dashboard', path: '/dashboard', icon: DashboardIcon, roles: ['OWNER', 'ADMIN', 'MANAGER'] },
     { title: 'Marketlar', path: '/markets', icon: StoreIcon, roles: ['OWNER', 'ADMIN', 'MANAGER'] },
-    { title: 'Xodimlar', path: '/employees', icon: PeopleIcon, roles: ['OWNER', 'ADMIN'] },
+    { title: 'Xodimlar', path: '/users', icon: PeopleIcon, roles: ['OWNER', 'ADMIN'] },
     { title: 'Mijozlar', path: '/customers', icon: PersonIcon, roles: ['OWNER', 'ADMIN', 'MANAGER'] },
     { title: 'Kategoriyalar', path: '/categories', icon: CategoryIcon, roles: ['OWNER', 'ADMIN', 'MANAGER', 'SELLER'] },
     { title: 'Mahsulotlar', path: '/products', icon: InventoryIcon, roles: ['OWNER', 'ADMIN', 'MANAGER', 'SELLER'] },

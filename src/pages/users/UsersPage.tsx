@@ -1,115 +1,211 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
     Box,
-    Card,
-    CardContent,
     Typography,
-    CircularProgress,
-    Alert,
     Button,
-    Container,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Paper,
+    IconButton,
+    TextField,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
-    TextField,
+    CircularProgress,
+    Alert,
+    InputAdornment,
+    Chip,
     Select,
     MenuItem,
     FormControl,
     InputLabel,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    IconButton,
-    Chip,
 } from '@mui/material';
 import {
+    Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
-    Add as AddIcon,
+    Search as SearchIcon,
 } from '@mui/icons-material';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { usersApi } from '../../api/endpoints/users.api';
+import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../../store/auth.store';
-import type { User } from '../../types';
+import { useMarketStore } from '../../store/market.store';
+import { usersApi } from '../../api/endpoints/users.api';
+import type { User, Role } from '../../types';
 
-// Employee Form Schema
-const employeeSchema = z.object({
-    fullName: z.string().min(3, 'Ism kamida 3 ta belgi'),
-    email: z.string().email('Email noto\'g\'ri'),
-    phone: z.string().min(10, 'Telefon raqami noto\'g\'ri').optional(),
-    password: z.string().min(8, 'Parol kamida 8 ta belgi').optional(),
-    role: z.enum(['ADMIN', 'MANAGER', 'SELLER']),
-});
+interface CreateUserInput {
+    fullName: string;
+    email: string;
+    phone?: string;
+    password?: string;
+    role: string;
+    marketId?: string;
+}
 
-type EmployeeFormData = z.infer<typeof employeeSchema>;
-
+/**
+ * UsersPage - Owner/Admin xodimlarni boshqarish
+ * GET /api/users endpoint orqali barcha xodimlarni oladi
+ * Owner faqat ADMIN, MANAGER, SELLER rollarni qo'sha oladi
+ */
 export default function UsersPage() {
-    const { marketId } = useParams<{ marketId?: string }>();
-    const { user: authUser } = useAuthStore();
+    const { user: currentUser } = useAuthStore();
+    const { selectedMarket } = useMarketStore();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [search, setSearch] = useState('');
     const [dialogError, setDialogError] = useState('');
-    const [dialogLoading, setDialogLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    const { control, handleSubmit, formState: { errors }, reset } = useForm<EmployeeFormData>({
-        resolver: zodResolver(employeeSchema),
+    const { handleSubmit, reset, setValue, watch } = useForm<CreateUserInput>({
+        defaultValues: { role: 'SELLER' },
     });
 
-    // Load market users
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                
-                // Get users for market (marketId from route params)
-                if (!marketId) {
-                    setError('Market ID topilmadi');
-                    setLoading(false);
-                    return;
-                }
+    const formValues = watch();
 
-                const response = await usersApi.getUsers(marketId);
-                setUsers(response.data.data || response.data || []);
-            } catch (err: any) {
-                setError(err.response?.data?.message || 'Users yuklab olishda xatolik');
-                console.error('Users fetch error:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUsers();
-    }, [marketId]);
-
-    const handleOpenDialog = (user: User | null = null) => {
-        setEditingUser(user);
-        setDialogError('');
-        if (user) {
-            // Check if user has a valid market role
-            const validRoles: string[] = ['ADMIN', 'MANAGER', 'SELLER'];
-            const userRole = validRoles.includes(user.role) ? user.role : 'ADMIN';
-            
-            reset({
-                fullName: user.fullName,
-                email: user.email,
-                phone: user.phone,
-                role: userRole as 'ADMIN' | 'MANAGER' | 'SELLER',
-            });
-        } else {
-            reset({});
+    // Determine available roles based on current user role
+    const getAvailableRoles = (): Role[] => {
+        if (currentUser?.role === 'OWNER') {
+            return ['ADMIN', 'MANAGER', 'SELLER'];
         }
+        // ADMIN can create all roles except SUPERADMIN and OWNER
+        return ['ADMIN', 'MANAGER', 'SELLER'];
+    };
+
+    const availableRoles = getAvailableRoles();
+
+    // Fetch users when selectedMarket changes
+    useEffect(() => {
+        // For OWNER: must select market first
+        if (currentUser?.role === 'OWNER' && !selectedMarket?.id) {
+            setUsers([]);
+            setError('Avval market tanlang');
+            setLoading(false);
+            return;
+        }
+
+        setError(null);
+        fetchUsers();
+    }, [selectedMarket?.id, currentUser?.role]);
+
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            let response;
+
+            if (currentUser?.role === 'OWNER' && selectedMarket?.id) {
+                // For OWNER: fetch market-specific employees
+                console.log('[Employees] Fetching market employees:', selectedMarket.id);
+                response = await usersApi.getUsers(selectedMarket.id);
+                console.log('[Employees] Market employees response:', response.data);
+            } else if (currentUser?.role === 'OWNER') {
+                // OWNER without market selected - should not reach here due to useEffect guard
+                setError('Avval market tanlang');
+                setLoading(false);
+                return;
+            } else {
+                // For other roles (ADMIN, etc): fetch all users
+                console.log('[Employees] Fetching all employees');
+                response = await usersApi.getUsers();
+                console.log('[Employees] All employees response:', response.data);
+            }
+
+            const data = Array.isArray(response.data)
+                ? response.data
+                : response.data.data || [];
+
+            setUsers(data);
+            console.log('[Employees] Employees set to state:', data);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Xodimlarni yuklab olishda xatolik';
+            setError(message);
+            console.error('[Employees] Error fetching employees:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onSubmit = async (data: CreateUserInput) => {
+        setSubmitting(true);
+        setDialogError('');
+
+        try {
+            // Validate market selection for OWNER role
+            if (currentUser?.role === 'OWNER' && !selectedMarket?.id) {
+                setDialogError('Avval market tanlang');
+                setSubmitting(false);
+                return;
+            }
+
+            const payload: any = {
+                fullName: data.fullName,
+                email: data.email,
+                phone: data.phone,
+                role: data.role,
+            };
+
+            // Add password only for new user creation
+            if (!editingUser && data.password) {
+                payload.password = data.password;
+            }
+
+            // Add marketId for OWNER - must use selectedMarket.id from store
+            if (currentUser?.role === 'OWNER' && selectedMarket?.id) {
+                payload.marketId = selectedMarket.id;
+            }
+
+            // Debug: Log payload before sending to backend
+            console.log('[Employee Create] Payload being sent to backend:', payload);
+            console.log('[Employee Create] Selected Market:', selectedMarket);
+
+            if (editingUser) {
+                // Update user - don't send password
+                delete payload.password;
+                console.log('[Employee Update] Payload:', payload);
+                await usersApi.updateUser(editingUser.id, payload);
+                setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...payload } : u) as User[]);
+            } else {
+                // Create new user
+                console.log('[Employee Create] Sending POST /api/users with payload:', payload);
+                await usersApi.createUser(payload);
+                await fetchUsers();
+            }
+            handleCloseDialog();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Xatolik yuz berdi';
+            setDialogError(message);
+            console.error('Create/Update employee error:', err);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleEditUser = (user: User) => {
+        setEditingUser(user);
+        setValue('fullName', user.fullName);
+        setValue('email', user.email);
+        setValue('phone', user.phone || '');
+        setValue('role', user.role);
         setOpenDialog(true);
+    };
+
+    const handleDeleteUser = async (userId: string) => {
+        if (!window.confirm('Haqiqatdan ham o\'chirilsinmi?')) return;
+
+        try {
+            await usersApi.deleteUser(userId);
+            setUsers(users.filter(u => u.id !== userId));
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'O\'chirishda xatolik';
+            setError(message);
+        }
     };
 
     const handleCloseDialog = () => {
@@ -119,109 +215,44 @@ export default function UsersPage() {
         reset();
     };
 
-    const onSubmit = async (data: EmployeeFormData) => {
-        setDialogLoading(true);
-        setDialogError('');
-        try {
-            if (editingUser) {
-                // Update user
-                await usersApi.updateUser(editingUser.id, data);
-                setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...data } : u));
-            } else {
-                // Create new user for market
-                if (!marketId) {
-                    setDialogError('Market ID topilmadi');
-                    setDialogLoading(false);
-                    return;
-                }
-
-                await usersApi.createUser({
-                    ...data,
-                    marketId,
-                });
-                
-                // Refresh users list
-                const response = await usersApi.getUsers(marketId);
-                setUsers(response.data.data || response.data || []);
-            }
-            handleCloseDialog();
-        } catch (err: any) {
-            setDialogError(err.response?.data?.message || 'Xatolik yuz berdi');
-        } finally {
-            setDialogLoading(false);
-        }
-    };
-
-    const handleDeleteUser = async (id: string) => {
-        if (window.confirm('Haqiqatan ham o\'chirasizmi?')) {
-            try {
-                await usersApi.deleteUser(id);
-                setUsers(users.filter(u => u.id !== id));
-            } catch (err: any) {
-                setError(err.response?.data?.message || 'Foydalanuvchini o\'chirishda xatolik');
-                // Refresh list on error to sync with backend
-                if (authUser?.marketId) {
-                    const response = await usersApi.getUsers(authUser.marketId);
-                    setUsers(response.data.data || response.data || []);
-                }
-            }
-        }
-    };
-
-    const getRoleColor = (role: string) => {
-        const colors: Record<string, 'error' | 'primary' | 'warning' | 'success' | 'info'> = {
-            ADMIN: 'warning',
-            MANAGER: 'info',
-            SELLER: 'success',
-        };
-        return colors[role] || 'default';
-    };
-
-    const getRoleLabel = (role: string) => {
-        const labels: Record<string, string> = {
-            ADMIN: 'Admin',
-            MANAGER: 'Menejer',
-            SELLER: 'Sotuvchi',
-        };
-        return labels[role] || role;
-    };
-
-    const getStatusColor = (status: string | undefined) => {
-        const normalized = status?.toLowerCase() || 'active';
-        return normalized === 'active' ? 'success' : 'warning';
-    };
-
-    const getStatusLabel = (status: string | undefined) => {
-        const normalized = status?.toLowerCase() || 'active';
-        return normalized === 'active' ? 'Faol' : 'Faol emas';
-    };
+    const filtered = users.filter((user) =>
+        user.fullName.toLowerCase().includes(search.toLowerCase()) ||
+        user.email.toLowerCase().includes(search.toLowerCase()) ||
+        (user.phone?.includes(search) ?? false),
+    );
 
     if (loading) {
         return (
-            <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
                 <CircularProgress />
-            </Container>
+            </Box>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ p: 3 }}>
+            {/* Header with Market Info */}
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Box>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-                        Xodimlar
+                    <Typography variant="h5" fontWeight="bold">
+                        Barcha Xodimlar
                     </Typography>
-                    {authUser?.marketId && (
+                    {currentUser?.role === 'OWNER' && selectedMarket?.id && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Market: {authUser?.role}
+                            Market: <strong>{selectedMarket.name}</strong>
                         </Typography>
                     )}
                 </Box>
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog()}
+                    onClick={() => setOpenDialog(true)}
+                    disabled={currentUser?.role === 'OWNER' && !selectedMarket?.id}
+                    title={
+                        currentUser?.role === 'OWNER' && !selectedMarket?.id
+                            ? 'Avval market tanlang'
+                            : ''
+                    }
                 >
                     Yangi Xodim
                 </Button>
@@ -234,185 +265,193 @@ export default function UsersPage() {
                 </Alert>
             )}
 
-            {/* Users Table */}
-            {users.length === 0 ? (
-                <Card>
-                    <CardContent sx={{ textAlign: 'center', py: 5 }}>
-                        <Typography color="text.secondary">
-                            Ushbu marketda hech qanday xodim topilmadi
-                        </Typography>
-                    </CardContent>
-                </Card>
-            ) : (
-                <TableContainer component={Card}>
-                    <Table>
-                        <TableHead sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 600 }}>Ism</TableCell>
-                                <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                                <TableCell sx={{ fontWeight: 600 }}>Telefon</TableCell>
-                                <TableCell sx={{ fontWeight: 600 }}>Rol</TableCell>
-                                <TableCell sx={{ fontWeight: 600 }}>Holat</TableCell>
-                                <TableCell align="center" sx={{ fontWeight: 600 }}>Amallar</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {users.map((user) => (
+            {/* Search */}
+            <TextField
+                fullWidth
+                placeholder="Ism, email yoki telefon bo'yicha qidirish..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                    startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+                }}
+                sx={{ mb: 2 }}
+            />
+
+            {/* Table */}
+            <Paper>
+                <Table>
+                    <TableHead>
+                        <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableCell sx={{ fontWeight: 600 }}>Ism</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Telefon</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Rol</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>Amallar</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {filtered.length > 0 ? (
+                            filtered.map((user) => (
                                 <TableRow key={user.id} hover>
                                     <TableCell>{user.fullName}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>{user.phone || '-'}</TableCell>
                                     <TableCell>
                                         <Chip
-                                            label={getRoleLabel(user.role)}
-                                            color={getRoleColor(user.role)}
-                                            variant="outlined"
+                                            label={user.role}
                                             size="small"
+                                            variant="outlined"
+                                            color={
+                                                user.role === 'ADMIN'
+                                                    ? 'info'
+                                                    : user.role === 'MANAGER'
+                                                        ? 'success'
+                                                        : user.role === 'SELLER'
+                                                            ? 'warning'
+                                                            : user.role === 'SUPERADMIN'
+                                                                ? 'error'
+                                                                : 'default'
+                                            }
                                         />
                                     </TableCell>
                                     <TableCell>
                                         <Chip
-                                            label={getStatusLabel(user.status)}
-                                            color={getStatusColor(user.status)}
-                                            variant="outlined"
+                                            label={user.status === 'active' ? 'Faol' : 'Faol emas'}
                                             size="small"
+                                            color={user.status === 'active' ? 'success' : 'error'}
                                         />
                                     </TableCell>
-                                    <TableCell align="center">
+                                    <TableCell align="right">
                                         <IconButton
                                             size="small"
-                                            onClick={() => handleOpenDialog(user)}
-                                            color="primary"
+                                            onClick={() => handleEditUser(user)}
+                                            title="Tahrirlash"
                                         >
                                             <EditIcon fontSize="small" />
                                         </IconButton>
                                         <IconButton
                                             size="small"
-                                            onClick={() => handleDeleteUser(user.id)}
                                             color="error"
+                                            onClick={() => handleDeleteUser(user.id)}
+                                            title="O'chirish"
                                         >
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            )}
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                                    <Typography color="text.secondary">
+                                        {search ? 'Natija topilmadi' : 'Xodimlar yo\'q'}
+                                    </Typography>
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </Paper>
 
-            {/* User Form Dialog */}
+            {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
                 <DialogTitle>
-                    {editingUser ? 'Xodimni Tahrirlash' : 'Yangi Xodim'}
+                    {editingUser ? 'Xodimni tahrirlash' : 'Yangi Xodim'}
                 </DialogTitle>
-                <DialogContent>
-                    <Box sx={{ pt: 2 }}>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <DialogContent>
+                        {/* Market Selection Info for OWNER */}
+                        {currentUser?.role === 'OWNER' && !editingUser && (
+                            <Alert severity={selectedMarket?.id ? 'success' : 'warning'} sx={{ mb: 2 }}>
+                                {selectedMarket?.id
+                                    ? `Market: ${selectedMarket.name}`
+                                    : 'Avval market tanlang!'}
+                            </Alert>
+                        )}
+
                         {dialogError && (
                             <Alert severity="error" sx={{ mb: 2 }}>
                                 {dialogError}
                             </Alert>
                         )}
 
-                        <form onSubmit={handleSubmit(onSubmit)}>
-                            <Controller
-                                name="fullName"
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        fullWidth
-                                        label="To'liq Ism"
-                                        {...field}
-                                        error={!!errors.fullName}
-                                        helperText={errors.fullName?.message}
-                                        sx={{ mb: 2 }}
-                                    />
-                                )}
-                            />
+                        <TextField
+                            fullWidth
+                            label="To'liq ismni"
+                            value={formValues.fullName || ''}
+                            onChange={(e) => setValue('fullName', e.target.value)}
+                            margin="normal"
+                            required
+                        />
 
-                            <Controller
-                                name="email"
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        fullWidth
-                                        label="Email"
-                                        type="email"
-                                        {...field}
-                                        error={!!errors.email}
-                                        helperText={errors.email?.message}
-                                        sx={{ mb: 2 }}
-                                        disabled={!!editingUser}
-                                    />
-                                )}
-                            />
+                        <TextField
+                            fullWidth
+                            label="Email"
+                            type="email"
+                            value={formValues.email || ''}
+                            onChange={(e) => setValue('email', e.target.value)}
+                            margin="normal"
+                            required
+                        />
 
-                            <Controller
-                                name="phone"
-                                control={control}
-                                render={({ field }) => (
-                                    <TextField
-                                        fullWidth
-                                        label="Telefon"
-                                        type="tel"
-                                        {...field}
-                                        error={!!errors.phone}
-                                        helperText={errors.phone?.message}
-                                        sx={{ mb: 2 }}
-                                        placeholder="+998901234567"
-                                    />
-                                )}
-                            />
+                        <TextField
+                            fullWidth
+                            label="Telefon"
+                            value={formValues.phone || ''}
+                            onChange={(e) => setValue('phone', e.target.value)}
+                            margin="normal"
+                        />
 
-                            {!editingUser && (
-                                <Controller
-                                    name="password"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <TextField
-                                            fullWidth
-                                            label="Parol"
-                                            type="password"
-                                            {...field}
-                                            error={!!errors.password}
-                                            helperText={errors.password?.message}
-                                            sx={{ mb: 2 }}
-                                            placeholder="Kamida 8 ta belgi"
-                                        />
-                                    )}
-                                />
-                            )}
-
-                            <Controller
-                                name="role"
-                                control={control}
-                                render={({ field }) => (
-                                    <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.role}>
-                                        <InputLabel>Rol</InputLabel>
-                                        <Select {...field} label="Rol">
-                                            <MenuItem value="ADMIN">Admin</MenuItem>
-                                            <MenuItem value="MANAGER">Menejer</MenuItem>
-                                            <MenuItem value="SELLER">Sotuvchi</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                )}
+                        {!editingUser && (
+                            <TextField
+                                fullWidth
+                                label="Parol"
+                                type="password"
+                                value={formValues.password || ''}
+                                onChange={(e) => setValue('password', e.target.value)}
+                                margin="normal"
+                                required
                             />
-                        </form>
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog} disabled={dialogLoading}>
-                        Bekor qilish
-                    </Button>
-                    <Button
-                        onClick={handleSubmit(onSubmit)}
-                        variant="contained"
-                        disabled={dialogLoading}
-                    >
-                        {dialogLoading ? <CircularProgress size={24} /> : 'Saqlash'}
-                    </Button>
-                </DialogActions>
+                        )}
+
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Rol</InputLabel>
+                            <Select
+                                value={formValues.role || 'SELLER'}
+                                label="Rol"
+                                onChange={(e) => setValue('role', e.target.value)}
+                            >
+                                {availableRoles.map((role) => (
+                                    <MenuItem key={role} value={role}>
+                                        {role === 'ADMIN' && 'Admin'}
+                                        {role === 'MANAGER' && 'Menejer'}
+                                        {role === 'SELLER' && 'Sotuvchi'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseDialog}>Bekor qilish</Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={
+                                submitting ||
+                                (!editingUser && currentUser?.role === 'OWNER' && !selectedMarket?.id)
+                            }
+                            title={
+                                !editingUser && currentUser?.role === 'OWNER' && !selectedMarket?.id
+                                    ? 'Avval market tanlang'
+                                    : ''
+                            }
+                        >
+                            {submitting ? <CircularProgress size={24} /> : editingUser ? 'Saqlash' : 'Qo\'shish'}
+                        </Button>
+                    </DialogActions>
+                </form>
             </Dialog>
-        </Container>
+        </Box>
     );
 }
