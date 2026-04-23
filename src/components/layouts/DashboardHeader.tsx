@@ -15,6 +15,8 @@ import { useAuthStore } from '../../store/auth.store';
 interface DashboardHeaderProps {
     onMenuClick: () => void;
     drawerWidth?: number;
+    sidebarCollapsed?: boolean;
+    isMobile?: boolean;
 }
 
 /**
@@ -27,6 +29,8 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({
     onMenuClick,
     drawerWidth = 0,
+    sidebarCollapsed = false,
+    isMobile = false,
 }: DashboardHeaderProps) {
     const navigate = useNavigate();
     const { logout } = useAuth();
@@ -69,13 +73,14 @@ export default function DashboardHeader({
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.enteringScreen,
                     }),
-                backgroundColor: '#fff',
+                backgroundColor: 'rgba(255,255,255,0.9)',
                 color: 'inherit',
-                boxShadow: (theme) =>
-                    `0 2px 8px ${theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'}`,
+                backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid rgba(148, 163, 184, 0.16)',
+                boxShadow: '0 12px 30px rgba(15, 23, 42, 0.06)',
             }}
         >
-            <Toolbar>
+            <Toolbar sx={{ minHeight: 72 }}>
                 <Tooltip title="Toggle Sidebar">
                     <IconButton
                         color="inherit"
@@ -83,27 +88,64 @@ export default function DashboardHeader({
                         onClick={onMenuClick}
                         sx={{
                             mr: 2,
-                            display: { xs: 'flex', sm: 'none' },
-                            color: '#667eea',
+                            color: '#3b82f6',
+                            border: '1px solid rgba(148, 163, 184, 0.2)',
+                            backgroundColor: 'rgba(255,255,255,0.72)',
+                            '&:hover': {
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            },
                         }}
                     >
                         <MenuIcon />
                     </IconButton>
                 </Tooltip>
 
-                <Typography
-                    variant="h6"
-                    sx={{
-                        fontWeight: 700,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        flex: 1,
-                    }}
-                >
-                    Balance Market
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
+                    <Box
+                        sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 3,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                            color: '#fff',
+                            fontWeight: 800,
+                            fontSize: '1rem',
+                            boxShadow: '0 12px 24px rgba(37, 99, 235, 0.28)',
+                            flexShrink: 0,
+                        }}
+                    >
+                        BM
+                    </Box>
+
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                            variant="h6"
+                            noWrap
+                            sx={{
+                                fontWeight: 800,
+                                color: '#0f172a',
+                                letterSpacing: '-0.02em',
+                                lineHeight: 1.1,
+                            }}
+                        >
+                            Balance Market
+                        </Typography>
+                        <Typography
+                            variant="caption"
+                            noWrap
+                            sx={{ color: 'text.secondary', display: 'block', mt: 0.35 }}
+                        >
+                            {isMobile
+                                ? 'Boshqaruv paneli'
+                                : sidebarCollapsed
+                                    ? 'Compact navigation'
+                                    : 'Smart market management dashboard'}
+                        </Typography>
+                    </Box>
+                </Box>
 
                 {/* User Menu */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -122,11 +164,12 @@ export default function DashboardHeader({
                         >
                             <Avatar
                                 sx={{
-                                    width: 40,
-                                    height: 40,
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    width: 42,
+                                    height: 42,
+                                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                                     fontSize: '0.9rem',
-                                    fontWeight: 600,
+                                    fontWeight: 700,
+                                    boxShadow: '0 10px 24px rgba(37, 99, 235, 0.26)',
                                 }}
                             >
                                 {userInitials}

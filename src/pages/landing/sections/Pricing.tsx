@@ -49,22 +49,22 @@ export default function Pricing() {
                       {plan.price.toLocaleString()} so'm
                     </span>
                     <span className="text-gray-500 dark:text-gray-400 font-medium">
-                      / 30 {t('landing.pricing.duration')}
+                      / {plan.duration} {t('landing.pricing.duration')}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex-grow space-y-4 mb-8">
-                  {plan.features?.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-3">
+                  {plan.description && (
+                    <div className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                       </div>
                       <span className="text-gray-600 dark:text-gray-300">
-                        {feature}
+                        {plan.description}
                       </span>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 <button 

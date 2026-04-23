@@ -109,7 +109,7 @@ export const SubscriptionHistoryPage: React.FC = () => {
     }
 
     const currentSubscription = currentQuery.data;
-    const history = historyQuery.data?.data || [];
+    const history = historyQuery.data || [];
 
     console.log('[SubscriptionHistoryPage] Rendering with:', {
         hasCurrentSubscription: !!currentSubscription,

@@ -79,67 +79,131 @@ export const createAppTheme = (mode: ThemeMode) => {
             ...(mode === 'light'
                 ? {
                     primary: {
-                        main: '#667eea',
-                        light: '#8b9ff5',
-                        dark: '#5568d3',
+                        main: '#2563eb',
+                        light: '#60a5fa',
+                        dark: '#1d4ed8',
                     },
                     secondary: {
-                        main: '#f093fb',
-                        light: '#f5a8ff',
-                        dark: '#da5fe0',
+                        main: '#0f172a',
+                        light: '#334155',
+                        dark: '#020617',
                     },
                     background: {
-                        default: '#f8f9fa',
+                        default: '#f4f7fb',
                         paper: '#ffffff',
                     },
                     text: {
-                        primary: '#2d3748',
-                        secondary: '#718096',
+                        primary: '#0f172a',
+                        secondary: '#64748b',
                     },
                 }
                 : {
                     primary: {
-                        main: '#667eea',
-                        light: '#8b9ff5',
-                        dark: '#5568d3',
+                        main: '#60a5fa',
+                        light: '#93c5fd',
+                        dark: '#2563eb',
                     },
                     secondary: {
-                        main: '#f093fb',
-                        light: '#f5a8ff',
-                        dark: '#da5fe0',
+                        main: '#cbd5e1',
+                        light: '#e2e8f0',
+                        dark: '#94a3b8',
                     },
                     background: {
-                        default: '#1a202c',
-                        paper: '#2d3748',
+                        default: '#0f172a',
+                        paper: '#111c2d',
                     },
                     text: {
-                        primary: '#f7fafc',
-                        secondary: '#cbd5e0',
+                        primary: '#f8fafc',
+                        secondary: '#cbd5e1',
                     },
                 }),
         },
         typography: {
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            h1: { fontWeight: 600 },
-            h2: { fontWeight: 600 },
-            h3: { fontWeight: 600 },
-            h4: { fontWeight: 600 },
-            h5: { fontWeight: 600 },
-            h6: { fontWeight: 600 },
+            fontFamily: '"Plus Jakarta Sans", "Segoe UI", "Inter", sans-serif',
+            h1: { fontWeight: 800, letterSpacing: '-0.03em' },
+            h2: { fontWeight: 800, letterSpacing: '-0.03em' },
+            h3: { fontWeight: 700, letterSpacing: '-0.02em' },
+            h4: { fontWeight: 700, letterSpacing: '-0.02em' },
+            h5: { fontWeight: 700, letterSpacing: '-0.015em' },
+            h6: { fontWeight: 700, letterSpacing: '-0.01em' },
+            button: { fontWeight: 700 },
+        },
+        shape: {
+            borderRadius: 8,
         },
         components: {
             MuiButton: {
                 styleOverrides: {
                     root: {
                         textTransform: 'none',
-                        borderRadius: '8px',
+                        borderRadius: 8,
+                        paddingInline: 18,
+                        boxShadow: 'none',
+                    },
+                    contained: {
+                        boxShadow: '0 12px 24px rgba(37, 99, 235, 0.22)',
                     },
                 },
             },
             MuiCard: {
                 styleOverrides: {
                     root: {
-                        borderRadius: '12px',
+                        borderRadius: 10,
+                        boxShadow: mode === 'light'
+                            ? '0 18px 48px rgba(15, 23, 42, 0.06)'
+                            : '0 20px 48px rgba(2, 6, 23, 0.32)',
+                        border: mode === 'light'
+                            ? '1px solid rgba(148, 163, 184, 0.12)'
+                            : '1px solid rgba(148, 163, 184, 0.16)',
+                    },
+                },
+            },
+            MuiPaper: {
+                styleOverrides: {
+                    root: {
+                        backgroundImage: 'none',
+                        borderRadius: 10,
+                        boxShadow: mode === 'light'
+                            ? '0 12px 32px rgba(15, 23, 42, 0.06)'
+                            : '0 18px 42px rgba(2, 6, 23, 0.26)',
+                        border: mode === 'light'
+                            ? '1px solid rgba(148, 163, 184, 0.12)'
+                            : '1px solid rgba(148, 163, 184, 0.14)',
+                    },
+                },
+            },
+            MuiTableHead: {
+                styleOverrides: {
+                    root: {
+                        '& .MuiTableCell-root': {
+                            fontWeight: 700,
+                            color: mode === 'light' ? '#334155' : '#e2e8f0',
+                            backgroundColor: mode === 'light' ? '#f8fafc' : '#162235',
+                        },
+                    },
+                },
+            },
+            MuiTableCell: {
+                styleOverrides: {
+                    root: {
+                        borderBottomColor: mode === 'light'
+                            ? 'rgba(148, 163, 184, 0.14)'
+                            : 'rgba(148, 163, 184, 0.12)',
+                    },
+                },
+            },
+            MuiChip: {
+                styleOverrides: {
+                    root: {
+                        borderRadius: 999,
+                        fontWeight: 700,
+                    },
+                },
+            },
+            MuiAppBar: {
+                styleOverrides: {
+                    root: {
+                        backgroundImage: 'none',
                     },
                 },
             },

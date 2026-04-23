@@ -1,9 +1,9 @@
 import { AlertCircle, Calendar, CheckCircle, Clock } from 'lucide-react';
 import dayjs from 'dayjs';
-import type { CurrentSubscription } from '../../api/endpoints/subscriptions.api';
+import type { SubscriptionItem } from '../../api/endpoints/subscriptions.api';
 
 interface CurrentSubscriptionCardProps {
-    subscription: CurrentSubscription | null | undefined;
+    subscription: SubscriptionItem | null | undefined;
     isLoading?: boolean;
     onUpgrade: () => void;
 }
@@ -58,13 +58,10 @@ export function CurrentSubscriptionCard({
         );
     }
 
-    const isActive = subscription.status === 'active';
-    const isExpired = subscription.status === 'expired';
-    const startDate = dayjs(subscription.startDate);
-    const endDate = dayjs(subscription.endDate);
-    const renewalDate = dayjs(subscription.renewalDate);
-    const now = dayjs();
-    const daysRemaining = endDate.diff(now, 'day');
+    const isActive = subscription.isActive;
+    const isExpired = !subscription.isActive;
+    const endDate = dayjs(subscription.subEndDate);
+    const daysRemaining = subscription.daysLeft;
 
     // Status indicator
     const getStatusInfo = () => {
@@ -122,20 +119,7 @@ export function CurrentSubscriptionCard({
             <p className="text-gray-700 text-sm mb-6">{statusInfo.description}</p>
 
             {/* Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {/* Start Date */}
-                <div className="bg-white/50 rounded-lg p-4">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Boshlanish sanasi
-                    </label>
-                    <div className="mt-2 flex items-center gap-2">
-                        <Calendar size={18} className="text-gray-400" />
-                        <p className="font-semibold text-gray-900">
-                            {startDate.format('DD.MM.YYYY')}
-                        </p>
-                    </div>
-                </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {/* End Date */}
                 <div className="bg-white/50 rounded-lg p-4">
                     <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -149,15 +133,15 @@ export function CurrentSubscriptionCard({
                     </div>
                 </div>
 
-                {/* Renewal Date */}
+                {/* Days Remaining */}
                 <div className="bg-white/50 rounded-lg p-4">
                     <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Yangilash sanasi
+                        Qolgan kunlar
                     </label>
                     <div className="mt-2 flex items-center gap-2">
                         <Clock size={18} className="text-gray-400" />
                         <p className="font-semibold text-gray-900">
-                            {renewalDate.format('DD.MM.YYYY')}
+                            {daysRemaining} kun
                         </p>
                     </div>
                 </div>
@@ -176,18 +160,11 @@ export function CurrentSubscriptionCard({
                 </div>
             </div>
 
-            {/* Features (if available) */}
-            {subscription.plan?.features && subscription.plan.features.length > 0 && (
+            {/* Description (if available) */}
+            {subscription.plan?.description && (
                 <div className="mb-6 bg-white/30 rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Tarifning imkoniyatlari:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {subscription.plan.features.map((feature, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-sm text-gray-700">
-                                <div className="w-2 h-2 bg-current rounded-full opacity-60"></div>
-                                <span>{feature}</span>
-                            </div>
-                        ))}
-                    </div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Tarifning tavsifi:</h4>
+                    <p className="text-sm text-gray-700">{subscription.plan.description}</p>
                 </div>
             )}
 

@@ -26,15 +26,21 @@ import {
 } from '@mui/material';
 import {
     Add as AddIcon,
+    CheckCircle as CheckCircleIcon,
     Edit as EditIcon,
+    ToggleOff as ToggleOffIcon,
+    ToggleOn as ToggleOnIcon,
     Delete as DeleteIcon,
     Search as SearchIcon,
 } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../../store/auth.store';
 import { useMarketStore } from '../../store/market.store';
+import { extractApiErrorMessage } from '../../api/error';
 import { usersApi } from '../../api/endpoints/users.api';
 import type { User, Role } from '../../types';
+import PageHeader from '../../components/common/PageHeader';
+import DataTable from '../../components/common/DataTable';
 
 interface CreateUserInput {
     fullName: string;
@@ -61,12 +67,19 @@ export default function UsersPage() {
     const [search, setSearch] = useState('');
     const [dialogError, setDialogError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [statusTargetUser, setStatusTargetUser] = useState<User | null>(null);
+    const [statusSubmitting, setStatusSubmitting] = useState(false);
+    const [statusError, setStatusError] = useState('');
+    const [statusValue, setStatusValue] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
 
     const { handleSubmit, reset, setValue, watch } = useForm<CreateUserInput>({
         defaultValues: { role: 'SELLER' },
     });
 
     const formValues = watch();
+
+    const isUserActive = (status?: string) => status?.toUpperCase() === 'ACTIVE';
 
     // Determine available roles based on current user role
     const getAvailableRoles = (): Role[] => {
@@ -170,16 +183,25 @@ export default function UsersPage() {
                 delete payload.password;
                 console.log('[Employee Update] Payload:', payload);
                 await usersApi.updateUser(editingUser.id, payload);
-                setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...payload } : u) as User[]);
+                await fetchUsers();
             } else {
                 // Create new user
                 console.log('[Employee Create] Sending POST /api/users with payload:', payload);
-                await usersApi.createUser(payload);
+                const response = await usersApi.createUser(payload);
+                const createdUser = response.data as User | undefined;
+
+                if (createdUser?.id) {
+                    setUsers((prev) => {
+                        const next = prev.filter((item) => item.id !== createdUser.id);
+                        return [createdUser, ...next];
+                    });
+                }
+
                 await fetchUsers();
             }
             handleCloseDialog();
         } catch (err) {
-            const message = err instanceof Error ? err.message : 'Xatolik yuz berdi';
+            const message = extractApiErrorMessage(err, 'Xatolik yuz berdi');
             setDialogError(message);
             console.error('Create/Update employee error:', err);
         } finally {
@@ -208,6 +230,42 @@ export default function UsersPage() {
         }
     };
 
+    const handleOpenStatusDialog = (user: User) => {
+        setStatusTargetUser(user);
+        setStatusValue(isUserActive(user.status) ? 'INACTIVE' : 'ACTIVE');
+        setStatusError('');
+        setStatusDialogOpen(true);
+    };
+
+    const handleCloseStatusDialog = () => {
+        if (statusSubmitting) {
+            return;
+        }
+
+        setStatusDialogOpen(false);
+        setStatusTargetUser(null);
+        setStatusError('');
+        setStatusValue('ACTIVE');
+    };
+
+    const handleSubmitStatusChange = async () => {
+        if (!statusTargetUser) {
+            return;
+        }
+
+        try {
+            setStatusSubmitting(true);
+            setStatusError('');
+            await usersApi.updateUserStatus(statusTargetUser.id, statusValue);
+            await fetchUsers();
+            handleCloseStatusDialog();
+        } catch (err) {
+            setStatusError(extractApiErrorMessage(err, 'Statusni yangilab bo‘lmadi'));
+        } finally {
+            setStatusSubmitting(false);
+        }
+    };
+
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setEditingUser(null);
@@ -231,32 +289,30 @@ export default function UsersPage() {
 
     return (
         <Box sx={{ p: 3 }}>
-            {/* Header with Market Info */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Box>
-                    <Typography variant="h5" fontWeight="bold">
-                        Barcha Xodimlar
-                    </Typography>
-                    {currentUser?.role === 'OWNER' && selectedMarket?.id && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Market: <strong>{selectedMarket.name}</strong>
-                        </Typography>
-                    )}
-                </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setOpenDialog(true)}
-                    disabled={currentUser?.role === 'OWNER' && !selectedMarket?.id}
-                    title={
-                        currentUser?.role === 'OWNER' && !selectedMarket?.id
-                            ? 'Avval market tanlang'
-                            : ''
-                    }
-                >
-                    Yangi Xodim
-                </Button>
-            </Box>
+            <PageHeader
+                eyebrow="Users"
+                title="Barcha Xodimlar"
+                subtitle={
+                    currentUser?.role === 'OWNER' && selectedMarket?.id
+                        ? `Market: ${selectedMarket.name}`
+                        : "Tizim foydalanuvchilari va ularning statuslarini boshqaring."
+                }
+                action={(
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => setOpenDialog(true)}
+                        disabled={currentUser?.role === 'OWNER' && !selectedMarket?.id}
+                        title={
+                            currentUser?.role === 'OWNER' && !selectedMarket?.id
+                                ? 'Avval market tanlang'
+                                : ''
+                        }
+                    >
+                        Yangi Xodim
+                    </Button>
+                )}
+            />
 
             {/* Error Alert */}
             {error && (
@@ -265,20 +321,21 @@ export default function UsersPage() {
                 </Alert>
             )}
 
-            {/* Search */}
-            <TextField
-                fullWidth
-                placeholder="Ism, email yoki telefon bo'yicha qidirish..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                    startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
-                }}
-                sx={{ mb: 2 }}
-            />
-
-            {/* Table */}
-            <Paper>
+            <DataTable
+                title="Xodimlar ro'yxati"
+                subtitle="Ism, email yoki telefon bo'yicha qidiruv."
+                toolbar={(
+                    <TextField
+                        fullWidth
+                        placeholder="Ism, email yoki telefon bo'yicha qidirish..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+                        }}
+                    />
+                )}
+            >
                 <Table>
                     <TableHead>
                         <TableRow sx={{ bgcolor: '#f5f5f5' }}>
@@ -317,12 +374,24 @@ export default function UsersPage() {
                                     </TableCell>
                                     <TableCell>
                                         <Chip
-                                            label={user.status === 'active' ? 'Faol' : 'Faol emas'}
+                                            label={isUserActive(user.status) ? 'Faol' : 'Faol emas'}
                                             size="small"
-                                            color={user.status === 'active' ? 'success' : 'error'}
+                                            color={isUserActive(user.status) ? 'success' : 'error'}
                                         />
                                     </TableCell>
                                     <TableCell align="right">
+                                        <IconButton
+                                            size="small"
+                                            color={isUserActive(user.status) ? 'warning' : 'success'}
+                                            onClick={() => handleOpenStatusDialog(user)}
+                                            title={isUserActive(user.status) ? 'Nofaol qilish' : 'Faol qilish'}
+                                        >
+                                            {isUserActive(user.status) ? (
+                                                <ToggleOffIcon fontSize="small" />
+                                            ) : (
+                                                <ToggleOnIcon fontSize="small" />
+                                            )}
+                                        </IconButton>
                                         <IconButton
                                             size="small"
                                             onClick={() => handleEditUser(user)}
@@ -352,7 +421,7 @@ export default function UsersPage() {
                         )}
                     </TableBody>
                 </Table>
-            </Paper>
+            </DataTable>
 
             {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -451,6 +520,53 @@ export default function UsersPage() {
                         </Button>
                     </DialogActions>
                 </form>
+            </Dialog>
+
+            <Dialog
+                open={statusDialogOpen}
+                onClose={handleCloseStatusDialog}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Statusni o'zgartirish</DialogTitle>
+                <DialogContent>
+                    {statusError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {statusError}
+                        </Alert>
+                    )}
+
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {statusTargetUser?.fullName} uchun yangi statusni tanlang.
+                    </Typography>
+
+                    <FormControl fullWidth>
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                            value={statusValue}
+                            label="Status"
+                            onChange={(e) => setStatusValue(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                        >
+                            <MenuItem value="ACTIVE">ACTIVE</MenuItem>
+                            <MenuItem value="INACTIVE">INACTIVE</MenuItem>
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseStatusDialog} disabled={statusSubmitting}>
+                        Bekor qilish
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmitStatusChange}
+                        disabled={statusSubmitting || !statusTargetUser}
+                        startIcon={
+                            statusSubmitting ? <CircularProgress size={18} color="inherit" /> : <CheckCircleIcon />
+                        }
+                    >
+                        Saqlash
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );

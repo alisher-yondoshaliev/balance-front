@@ -28,7 +28,12 @@ import {
     CreditCard as CreditCardIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { subscriptionsApi } from '../../../api/endpoints/subscriptions.api';
+import { extractApiErrorMessage } from '../../../api/error';
+import {
+    normalizeCurrentSubscription,
+    normalizeSubscriptionHistory,
+    subscriptionsApi,
+} from '../../../api/endpoints/subscriptions.api';
 import type { SubscriptionPlan } from '../../../api/endpoints/subscriptions.api';
 import dayjs from 'dayjs';
 
@@ -49,8 +54,7 @@ export default function SubscriptionSettingsSection({
         queryFn: () => subscriptionsApi.getCurrent(),
         retry: false,
     });
-    const currentSub = currentSubResponse?.data;
-    const subscription = currentSub?.subscription ?? null;
+    const subscription = normalizeCurrentSubscription(currentSubResponse?.data ?? null);
     const isSubActive = subscription?.isActive === true;
 
     // ── Planlar ───────────────────────────────────────
@@ -65,13 +69,12 @@ export default function SubscriptionSettingsSection({
         queryKey: ['subscriptions-history'],
         queryFn: () => subscriptionsApi.getHistory(),
     });
-    // Backend to'g'ridan array qaytaradi
-    const history = Array.isArray(historyResponse?.data) ? historyResponse.data : [];
+    const history = normalizeSubscriptionHistory(historyResponse?.data);
 
     // ── To'lov mutatsiyasi ────────────────────────────
     const payMutation = useMutation({
         mutationFn: (planId: string) =>
-            subscriptionsApi.pay(planId),
+            subscriptionsApi.pay({ planId }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['subscriptions-current'] });
             queryClient.invalidateQueries({ queryKey: ['subscriptions-history'] });
@@ -80,7 +83,10 @@ export default function SubscriptionSettingsSection({
             onShowToast("Obuna muvaffaqiyatli faollashtirildi! ✓", 'success');
         },
         onError: (error: any) => {
-            const msg = error?.response?.data?.message || "To'lovda xatolik yuz berdi";
+            const msg = extractApiErrorMessage(
+                error,
+                "To'lovda xatolik yuz berdi",
+            );
             onShowToast(msg, 'error');
         },
     });

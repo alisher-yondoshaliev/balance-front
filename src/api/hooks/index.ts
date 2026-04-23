@@ -10,6 +10,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import {
     customersApi,
     contractsApi,
@@ -21,6 +22,7 @@ import {
     type UpdateCustomerInput,
     type CreateContractInput,
     type CreateProductInput,
+    type CreateCategoryPayload,
 } from '../index';
 
 // ============================================================================
@@ -75,7 +77,7 @@ export const useCustomers = (params?: {
 }) => {
     return useQuery({
         queryKey: params?.marketId ? queryKeys.customers.byMarket(params.marketId) : queryKeys.customers.all,
-        queryFn: () => customersAPI.getAll(params),
+        queryFn: () => customersApi.getAll(params?.marketId || '').then(r => r.data),
         staleTime: 1000 * 60 * 5, // 5 minutes
         gcTime: 1000 * 60 * 10, // 10 minutes
         retry: 1,
@@ -85,7 +87,7 @@ export const useCustomers = (params?: {
 export const useCustomerById = (id: string | null) => {
     return useQuery({
         queryKey: id ? queryKeys.customers.detail(id) : queryKeys.customers.all,
-        queryFn: () => (id ? customersAPI.getById(id) : null),
+        queryFn: () => (id ? customersApi.getOne(id).then(r => r.data) : null),
         enabled: !!id,
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
@@ -96,13 +98,13 @@ export const useCreateCustomer = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateCustomerInput) => customersAPI.create(data),
+        mutationFn: (data: CreateCustomerInput) => customersApi.create(data),
         onSuccess: () => {
             // Invalidate all customer queries
             queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
         },
         onError: (error) => {
-            console.error('Create customer error:', handleApiError(error));
+            console.error('Create customer error:', getErrorMessage(error));
         },
     });
 };
@@ -111,7 +113,7 @@ export const useUpdateCustomer = (customerId: string) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: UpdateCustomerInput) => customersAPI.update(customerId, data),
+        mutationFn: (data: UpdateCustomerInput) => customersApi.update(customerId, data),
         onSuccess: () => {
             // Invalidate specific customer
             queryClient.invalidateQueries({
@@ -121,7 +123,7 @@ export const useUpdateCustomer = (customerId: string) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
         },
         onError: (error) => {
-            console.error('Update customer error:', handleApiError(error));
+            console.error('Update customer error:', getErrorMessage(error));
         },
     });
 };
@@ -130,12 +132,12 @@ export const useDeleteCustomer = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => customersAPI.delete(id),
+        mutationFn: (id: string) => customersApi.remove(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
         },
         onError: (error) => {
-            console.error('Delete customer error:', handleApiError(error));
+            console.error('Delete customer error:', getErrorMessage(error));
         },
     });
 };
@@ -151,7 +153,7 @@ export const useContracts = (params?: {
 }) => {
     return useQuery({
         queryKey: params?.marketId ? queryKeys.contracts.byMarket(params.marketId) : queryKeys.contracts.all,
-        queryFn: () => contractsAPI.getAll(params),
+        queryFn: () => contractsApi.getAll(params?.marketId || '').then(r => r.data || []),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
     });
@@ -160,7 +162,7 @@ export const useContracts = (params?: {
 export const useContractById = (id: string | null) => {
     return useQuery({
         queryKey: id ? queryKeys.contracts.detail(id) : queryKeys.contracts.all,
-        queryFn: () => (id ? contractsAPI.getById(id) : null),
+        queryFn: () => (id ? contractsApi.getOne(id).then(r => r.data) : null),
         enabled: !!id,
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
@@ -171,12 +173,12 @@ export const useCreateContract = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateContractInput) => contractsAPI.create(data),
+        mutationFn: (data: CreateContractInput) => contractsApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all });
         },
         onError: (error) => {
-            console.error('Create contract error:', handleApiError(error));
+            console.error('Create contract error:', getErrorMessage(error));
         },
     });
 };
@@ -186,7 +188,7 @@ export const useUpdateContract = (contractId: string) => {
 
     return useMutation({
         mutationFn: (data: Partial<CreateContractInput>) =>
-            contractsAPI.update(contractId, data),
+            contractsApi.update(contractId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.contracts.detail(contractId),
@@ -194,7 +196,7 @@ export const useUpdateContract = (contractId: string) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all });
         },
         onError: (error) => {
-            console.error('Update contract error:', handleApiError(error));
+            console.error('Update contract error:', getErrorMessage(error));
         },
     });
 };
@@ -203,12 +205,12 @@ export const useDeleteContract = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => contractsAPI.delete(id),
+        mutationFn: (id: string) => contractsApi.remove(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all });
         },
         onError: (error) => {
-            console.error('Delete contract error:', handleApiError(error));
+            console.error('Delete contract error:', getErrorMessage(error));
         },
     });
 };
@@ -224,7 +226,7 @@ export const useProducts = (params?: {
 }) => {
     return useQuery({
         queryKey: params?.marketId ? queryKeys.products.byMarket(params.marketId) : queryKeys.products.all,
-        queryFn: () => productsAPI.getAll(params),
+        queryFn: () => productsApi.getAll(params?.marketId || '').then(r => r.data || []),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
     });
@@ -233,7 +235,7 @@ export const useProducts = (params?: {
 export const useProductById = (id: string | null) => {
     return useQuery({
         queryKey: id ? queryKeys.products.detail(id) : queryKeys.products.all,
-        queryFn: () => (id ? productsAPI.getById(id) : null),
+        queryFn: () => (id ? productsApi.getOne(id).then(r => r.data) : null),
         enabled: !!id,
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
@@ -244,12 +246,12 @@ export const useCreateProduct = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateProductInput) => productsAPI.create(data),
+        mutationFn: (data: CreateProductInput) => productsApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
         },
         onError: (error) => {
-            console.error('Create product error:', handleApiError(error));
+            console.error('Create product error:', getErrorMessage(error));
         },
     });
 };
@@ -259,7 +261,7 @@ export const useUpdateProduct = (productId: string) => {
 
     return useMutation({
         mutationFn: (data: Partial<CreateProductInput>) =>
-            productsAPI.update(productId, data),
+            productsApi.update(productId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: queryKeys.products.detail(productId),
@@ -267,7 +269,7 @@ export const useUpdateProduct = (productId: string) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
         },
         onError: (error) => {
-            console.error('Update product error:', handleApiError(error));
+            console.error('Update product error:', getErrorMessage(error));
         },
     });
 };
@@ -276,12 +278,12 @@ export const useDeleteProduct = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => productsAPI.delete(id),
+        mutationFn: (id: string) => productsApi.remove(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
         },
         onError: (error) => {
-            console.error('Delete product error:', handleApiError(error));
+            console.error('Delete product error:', getErrorMessage(error));
         },
     });
 };
@@ -297,7 +299,7 @@ export const useCategories = (params?: {
 }) => {
     return useQuery({
         queryKey: params?.marketId ? queryKeys.categories.byMarket(params.marketId) : queryKeys.categories.all,
-        queryFn: () => categoriesAPI.getAll(params),
+        queryFn: () => categoriesApi.getCategories().then(r => r.data),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
     });
@@ -307,12 +309,12 @@ export const useCreateCategory = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateCategoryInput) => categoriesAPI.create(data),
+        mutationFn: (data: CreateCategoryPayload) => categoriesApi.createCategory(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
         },
         onError: (error) => {
-            console.error('Create category error:', handleApiError(error));
+            console.error('Create category error:', getErrorMessage(error));
         },
     });
 };
@@ -321,13 +323,13 @@ export const useUpdateCategory = (categoryId: string) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: Partial<CreateCategoryInput>) =>
-            categoriesAPI.update(categoryId, data),
+        mutationFn: (data: Partial<CreateCategoryPayload>) =>
+            categoriesApi.updateCategory(categoryId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
         },
         onError: (error) => {
-            console.error('Update category error:', handleApiError(error));
+            console.error('Update category error:', getErrorMessage(error));
         },
     });
 };
@@ -336,12 +338,12 @@ export const useDeleteCategory = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => categoriesAPI.delete(id),
+        mutationFn: (id: string) => categoriesApi.deleteCategory(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
         },
         onError: (error) => {
-            console.error('Delete category error:', handleApiError(error));
+            console.error('Delete category error:', getErrorMessage(error));
         },
     });
 };
@@ -353,7 +355,7 @@ export const useDeleteCategory = () => {
 export const useDashboardSummary = (marketId: string | null) => {
     return useQuery({
         queryKey: marketId ? queryKeys.dashboard.summary(marketId) : queryKeys.dashboard.all,
-        queryFn: () => (marketId ? dashboardAPI.getSummary(marketId) : null),
+        queryFn: () => (marketId ? dashboardApi.getSummary(marketId).then(r => r.data) : null),
         enabled: !!marketId,
         staleTime: 1000 * 60 * 2, // 2 minutes - dashboard updates frequently
         gcTime: 1000 * 60 * 5,
@@ -368,11 +370,25 @@ export const useDashboardSummary = (marketId: string | null) => {
 export const useSubscriptionPlans = () => {
     return useQuery({
         queryKey: queryKeys.subscriptions.plans,
-        queryFn: () => subscriptionsAPI.getPlans(),
+        queryFn: () => subscriptionsApi.getPlans().then(r => r.data),
         staleTime: 1000 * 60 * 60, // 1 hour - plans rarely change
         gcTime: 1000 * 60 * 60 * 2, // 2 hours
         retry: 2,
     });
+};
+
+// ============================================================================
+// ERROR HANDLING UTILITY
+// ============================================================================
+const getErrorMessage = (error: unknown): string => {
+    if (axios.isAxiosError(error)) {
+        if (error.response?.data) {
+            const data = error.response.data as { message?: string; error?: string };
+            return data.message || data.error || 'API error occurred';
+        }
+        return error.message || 'Request failed';
+    }
+    return error instanceof Error ? error.message : 'Unknown error';
 };
 
 // ============================================================================

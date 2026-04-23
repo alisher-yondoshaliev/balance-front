@@ -6,18 +6,61 @@ import {
     CircularProgress, Alert, InputAdornment, Select,
     MenuItem, FormControl, InputLabel,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
+import {
+    Add as AddIcon,
+    Search as SearchIcon,
+    CheckCircle as CheckCircleIcon,
+    Cancel as CancelIcon,
+    Schedule as ScheduleIcon,
+    TaskAlt as TaskAltIcon,
+} from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { contractsApi } from '../../api';
 import { useMarketStore } from '../../store/market.store';
 import type { Contract, ContractStatus } from '../../types';
 import dayjs from 'dayjs';
+import PageHeader from '../../components/common/PageHeader';
+import DataTable from '../../components/common/DataTable';
 
-const statusColors: Record<ContractStatus, 'success' | 'default' | 'warning' | 'info' | 'error'> = {
+type ContractStatusKey = 'active' | 'draft' | 'expired' | 'terminated' | 'completed' | 'overdue' | 'cancelled';
+
+const getContractStatusKey = (status?: string): ContractStatusKey => {
+    switch (status?.toUpperCase()) {
+        case 'ACTIVE':
+            return 'active';
+        case 'COMPLETED':
+            return 'completed';
+        case 'OVERDUE':
+            return 'overdue';
+        case 'CANCELLED':
+            return 'cancelled';
+        case 'EXPIRED':
+            return 'expired';
+        case 'TERMINATED':
+            return 'terminated';
+        default:
+            return 'draft';
+    }
+};
+
+const statusColors: Record<ContractStatusKey, 'success' | 'default' | 'warning' | 'info' | 'error'> = {
     active: 'success',
+    completed: 'info',
+    overdue: 'warning',
+    cancelled: 'error',
     draft: 'default',
     expired: 'warning',
     terminated: 'error',
+};
+
+const statusIcons: Record<ContractStatusKey, JSX.Element> = {
+    active: <CheckCircleIcon fontSize="small" />,
+    completed: <TaskAltIcon fontSize="small" />,
+    overdue: <ScheduleIcon fontSize="small" />,
+    cancelled: <CancelIcon fontSize="small" />,
+    draft: <ScheduleIcon fontSize="small" />,
+    expired: <ScheduleIcon fontSize="small" />,
+    terminated: <CancelIcon fontSize="small" />,
 };
 
 export default function ContractsPage() {
@@ -39,7 +82,7 @@ export default function ContractsPage() {
         const matchSearch =
             c.contractNumber.toLowerCase().includes(search.toLowerCase()) ||
             c.customer?.fullName.toLowerCase().includes(search.toLowerCase());
-        const matchStatus = statusFilter ? c.status === statusFilter : true;
+        const matchStatus = statusFilter ? c.status?.toUpperCase() === statusFilter : true;
         return matchSearch && matchStatus;
     });
 
@@ -48,42 +91,50 @@ export default function ContractsPage() {
 
     return (
         <Box>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h5" fontWeight="bold">Shartnomalar</Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate('/contracts/create')}
-                >
-                    Yangi shartnoma
-                </Button>
-            </Box>
-
-            <Box display="flex" gap={2} mb={2}>
-                <TextField
-                    placeholder="Shartnoma yoki mijoz..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
-                    sx={{ flex: 1 }}
-                />
-                <FormControl sx={{ minWidth: 160 }}>
-                    <InputLabel>Holat</InputLabel>
-                    <Select
-                        value={statusFilter}
-                        label="Holat"
-                        onChange={(e) => setStatusFilter(e.target.value)}
+            <PageHeader
+                eyebrow="Contracts"
+                title="Shartnomalar"
+                subtitle="To'lovlar, muddatlar va mijozga bog'liq barcha shartnomalarni nazorat qiling."
+                action={(
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => navigate('/contracts/create')}
                     >
-                        <MenuItem value="">Hammasi</MenuItem>
-                        <MenuItem value="ACTIVE">Faol</MenuItem>
-                        <MenuItem value="COMPLETED">Tugallangan</MenuItem>
-                        <MenuItem value="OVERDUE">Muddati o'tgan</MenuItem>
-                        <MenuItem value="CANCELLED">Bekor qilingan</MenuItem>
-                    </Select>
-                </FormControl>
-            </Box>
+                        Yangi shartnoma
+                    </Button>
+                )}
+            />
 
-            <Paper>
+            <DataTable
+                title="Shartnomalar ro'yxati"
+                subtitle="Shartnoma raqami, mijoz va holat bo'yicha qidiring."
+                toolbar={(
+                    <Box display="flex" gap={2} flexDirection={{ xs: 'column', md: 'row' }}>
+                        <TextField
+                            placeholder="Shartnoma yoki mijoz..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+                            sx={{ flex: 1 }}
+                        />
+                        <FormControl sx={{ minWidth: { xs: '100%', md: 200 } }}>
+                            <InputLabel>Holat</InputLabel>
+                            <Select
+                                value={statusFilter}
+                                label="Holat"
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
+                                <MenuItem value="">Hammasi</MenuItem>
+                                <MenuItem value="ACTIVE">Faol</MenuItem>
+                                <MenuItem value="COMPLETED">Tugallangan</MenuItem>
+                                <MenuItem value="OVERDUE">Muddati o'tgan</MenuItem>
+                                <MenuItem value="CANCELLED">Bekor qilingan</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+                )}
+            >
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -119,18 +170,26 @@ export default function ContractsPage() {
                                 </TableCell>
                                 <TableCell>{contract.termMonths} oy</TableCell>
                                 <TableCell>
+                                    {(() => {
+                                        const statusKey = getContractStatusKey(contract.status);
+
+                                        return (
                                     <Chip
                                         label={contract.status}
+                                        icon={statusIcons[statusKey]}
                                         size="small"
-                                        color={statusColors[contract.status as ContractStatus] || 'default'}
+                                        color={statusColors[statusKey]}
+                                        variant="filled"
                                     />
+                                        );
+                                    })()}
                                 </TableCell>
                                 <TableCell>{dayjs(contract.startDate).format('DD.MM.YYYY')}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-            </Paper>
+            </DataTable>
         </Box>
     );
 }

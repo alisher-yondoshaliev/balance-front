@@ -32,6 +32,9 @@ import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
+    ToggleOn as ToggleOnIcon,
+    ToggleOff as ToggleOffIcon,
+    CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../../store/auth.store';
@@ -39,6 +42,8 @@ import { useMarketStore } from '../../store/market.store';
 import { employeesApi, type CreateEmployeePayload } from '../../api/endpoints/employees.api';
 import { EMPLOYEE_FILTER_OPTIONS, getStatusLabel, getRoleLabel } from '../../config/employeeFilters';
 import type { MarketUser, MarketUsersResponse, MarketUsersQueryParams } from '../../types/resources';
+import { extractApiErrorMessage } from '../../api/error';
+import PageHeader from '../../components/common/PageHeader';
 
 /**
  * Helper: Build backend API query parameters
@@ -63,7 +68,7 @@ const buildQueryParams = (
         params.search = filters.search.trim();
     }
     if (filters.status) {
-        params.status = filters.status as 'active' | 'inactive';
+        params.status = filters.status as 'ACTIVE' | 'INACTIVE';
     }
     if (filters.role) {
         // Role is already stored as backend value (ADMIN, MANAGER, SELLER)
@@ -75,7 +80,7 @@ const buildQueryParams = (
 
 interface EmployeeFilters {
     search: string;
-    status: 'active' | 'inactive' | '';
+    status: 'ACTIVE' | 'INACTIVE' | '';
     role: string; // Stored as backend values: ADMIN, MANAGER, SELLER, or ''
     sortBy: 'fullName' | 'email' | 'createdAt';
     order: 'asc' | 'desc';
@@ -105,6 +110,11 @@ export default function EmployeesPage() {
     const [editingEmployee, setEditingEmployee] = useState<MarketUser | null>(null);
     const [dialogError, setDialogError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [statusTargetEmployee, setStatusTargetEmployee] = useState<MarketUser | null>(null);
+    const [statusValue, setStatusValue] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+    const [statusSubmitting, setStatusSubmitting] = useState(false);
+    const [statusError, setStatusError] = useState('');
 
     // Pagination
     const [page, setPage] = useState(0);
@@ -126,6 +136,7 @@ export default function EmployeesPage() {
         defaultValues: { role: 'SELLER' }, // Backend value
     });
     const formValues = watch();
+    const isEmployeeActive = (status?: string) => status?.toUpperCase() === 'ACTIVE';
 
     // Get available roles for create/edit dialog - use backend values
     const getAvailableFormRoles = (): Array<{ label: string; value: string }> => {
@@ -251,7 +262,7 @@ export default function EmployeesPage() {
         reset();
     };
 
-    const handleDeleteEmployee = async (employeeId: number) => {
+    const handleDeleteEmployee = async (employeeId: string) => {
         if (!window.confirm('Haqiqatdan ham o\'chirilsinmi?')) return;
 
         try {
@@ -262,6 +273,42 @@ export default function EmployeesPage() {
             const message = ((err as any)?.response?.data?.message) || 'O\'chirishda xatolik';
             setError(message);
             console.error('[EmployeesPage] Delete error:', err);
+        }
+    };
+
+    const handleOpenStatusDialog = (employee: MarketUser) => {
+        setStatusTargetEmployee(employee);
+        setStatusValue(isEmployeeActive(employee.status) ? 'INACTIVE' : 'ACTIVE');
+        setStatusError('');
+        setStatusDialogOpen(true);
+    };
+
+    const handleCloseStatusDialog = () => {
+        if (statusSubmitting) {
+            return;
+        }
+
+        setStatusDialogOpen(false);
+        setStatusTargetEmployee(null);
+        setStatusValue('ACTIVE');
+        setStatusError('');
+    };
+
+    const handleSubmitStatusChange = async () => {
+        if (!statusTargetEmployee) {
+            return;
+        }
+
+        try {
+            setStatusSubmitting(true);
+            setStatusError('');
+            await employeesApi.updateEmployeeStatus(statusTargetEmployee.id, statusValue);
+            await fetchEmployees();
+            handleCloseStatusDialog();
+        } catch (err) {
+            setStatusError(extractApiErrorMessage(err, "Statusni yangilab bo'lmadi"));
+        } finally {
+            setStatusSubmitting(false);
         }
     };
 
@@ -358,32 +405,30 @@ export default function EmployeesPage() {
 
     return (
         <Box sx={{ p: 3 }}>
-            {/* Header with Market Info */}
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Box>
-                    <Typography variant="h5" fontWeight="bold">
-                        Xodimlar
-                    </Typography>
-                    {currentUser?.role === 'OWNER' && selectedMarket?.id && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Market: <strong>{selectedMarket.name}</strong>
-                        </Typography>
-                    )}
-                </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={handleCreateClick}
-                    disabled={currentUser?.role === 'OWNER' && !selectedMarket?.id}
-                    title={
-                        currentUser?.role === 'OWNER' && !selectedMarket?.id
-                            ? 'Avval market tanlang'
-                            : ''
-                    }
-                >
-                    Yangi Xodim
-                </Button>
-            </Box>
+            <PageHeader
+                eyebrow="Employees"
+                title="Xodimlar"
+                subtitle={
+                    currentUser?.role === 'OWNER' && selectedMarket?.id
+                        ? `Market: ${selectedMarket.name}`
+                        : "Xodimlar ro'yxati, statusi va rollarini boshqaring."
+                }
+                action={(
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleCreateClick}
+                        disabled={currentUser?.role === 'OWNER' && !selectedMarket?.id}
+                        title={
+                            currentUser?.role === 'OWNER' && !selectedMarket?.id
+                                ? 'Avval market tanlang'
+                                : ''
+                        }
+                    >
+                        Yangi Xodim
+                    </Button>
+                )}
+            />
 
             {/* Error Alert */}
             {error && (
@@ -392,9 +437,7 @@ export default function EmployeesPage() {
                 </Alert>
             )}
 
-            {/* Filters Row 1: Search, Status, Role */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
-                {/* Search */}
                 <TextField
                     fullWidth
                     placeholder="Ism yoki email bo'yicha qidirish..."
@@ -406,7 +449,6 @@ export default function EmployeesPage() {
                     size="small"
                 />
 
-                {/* Status Filter - Sends backend values (active, inactive) */}
                 <FormControl fullWidth size="small">
                     <InputLabel>Status</InputLabel>
                     <Select
@@ -422,7 +464,6 @@ export default function EmployeesPage() {
                     </Select>
                 </FormControl>
 
-                {/* Role Filter - Sends backend values (ADMIN, MANAGER, SELLER) */}
                 <FormControl fullWidth size="small">
                     <InputLabel>Rol</InputLabel>
                     <Select
@@ -439,9 +480,7 @@ export default function EmployeesPage() {
                 </FormControl>
             </Box>
 
-            {/* Filters Row 2: Sort By, Order */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
-                {/* Sort By - Sends backend values (fullName, email, createdAt) */}
                 <FormControl fullWidth size="small">
                     <InputLabel>Sortlash</InputLabel>
                     <Select
@@ -457,7 +496,6 @@ export default function EmployeesPage() {
                     </Select>
                 </FormControl>
 
-                {/* Order - Sends backend values (asc, desc) */}
                 <FormControl fullWidth size="small">
                     <InputLabel>Tartib</InputLabel>
                     <Select
@@ -522,13 +560,25 @@ export default function EmployeesPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={getStatusLabel(employee.status as 'active' | 'inactive')}
+                                                    label={getStatusLabel(employee.status)}
                                                     size="small"
-                                                    color={employee.status === 'active' ? 'success' : 'error'}
+                                                    color={isEmployeeActive(employee.status) ? 'success' : 'error'}
                                                 />
                                             </TableCell>
                                             <TableCell>{formatDate(employee.createdAt)}</TableCell>
                                             <TableCell align="right">
+                                                <IconButton
+                                                    size="small"
+                                                    color={isEmployeeActive(employee.status) ? 'warning' : 'success'}
+                                                    onClick={() => handleOpenStatusDialog(employee)}
+                                                    title={isEmployeeActive(employee.status) ? 'Nofaol qilish' : 'Faol qilish'}
+                                                >
+                                                    {isEmployeeActive(employee.status) ? (
+                                                        <ToggleOffIcon fontSize="small" />
+                                                    ) : (
+                                                        <ToggleOnIcon fontSize="small" />
+                                                    )}
+                                                </IconButton>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleEditClick(employee)}
@@ -676,6 +726,53 @@ export default function EmployeesPage() {
                         </Button>
                     </DialogActions>
                 </form>
+            </Dialog>
+
+            <Dialog
+                open={statusDialogOpen}
+                onClose={handleCloseStatusDialog}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Statusni o'zgartirish</DialogTitle>
+                <DialogContent>
+                    {statusError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {statusError}
+                        </Alert>
+                    )}
+
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {statusTargetEmployee?.fullName} uchun yangi statusni tanlang.
+                    </Typography>
+
+                    <FormControl fullWidth>
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                            value={statusValue}
+                            label="Status"
+                            onChange={(e) => setStatusValue(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                        >
+                            <MenuItem value="ACTIVE">ACTIVE</MenuItem>
+                            <MenuItem value="INACTIVE">INACTIVE</MenuItem>
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseStatusDialog} disabled={statusSubmitting}>
+                        Bekor qilish
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmitStatusChange}
+                        disabled={statusSubmitting || !statusTargetEmployee}
+                        startIcon={
+                            statusSubmitting ? <CircularProgress size={18} color="inherit" /> : <CheckCircleIcon />
+                        }
+                    >
+                        Saqlash
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );

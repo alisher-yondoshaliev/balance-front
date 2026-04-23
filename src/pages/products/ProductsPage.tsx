@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableHead, TableRow, Paper, IconButton, TextField,
@@ -10,6 +9,8 @@ import {
 import {
   Add as AddIcon, Edit as EditIcon,
   Delete as DeleteIcon, Search as SearchIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
@@ -19,11 +20,21 @@ import { useMarketStore } from '../../store/market.store';
 import { categoriesApi } from '../../api/endpoints/categories.api';
 import type { Product } from '../../types';
 import dayjs from 'dayjs';
+import PageHeader from '../../components/common/PageHeader';
+import DataTable from '../../components/common/DataTable';
+
+const getProductStatusKey = (status?: string): 'active' | 'inactive' =>
+  status?.toLowerCase() === 'active' ? 'active' : 'inactive';
 
 const statusColors: Record<'active' | 'inactive', 'success' | 'error'> = {
   active: 'success',
   inactive: 'error',
 };
+
+const statusIcons = {
+  active: <CheckCircleIcon fontSize="small" />,
+  inactive: <CancelIcon fontSize="small" />,
+} as const;
 
 export default function ProductsPage() {
 
@@ -106,7 +117,7 @@ export default function ProductsPage() {
       setValue('description', product.description);
       setValue('categoryId', product.categoryId);
       setValue('stock', product.stock);
-      setValue('basePrice', product.price || 0);
+      setValue('basePrice', product.basePrice || 0);
     } else {
       setEditItem(null);
       reset();
@@ -140,40 +151,45 @@ export default function ProductsPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" fontWeight="bold">Mahsulotlar</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Yangi mahsulot
-        </Button>
-      </Box>
-
-      <Paper sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          placeholder="Mahsulot qidirish..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ p: 2 }}
-        />
-      </Paper>
+      <PageHeader
+        eyebrow="Products"
+        title="Mahsulotlar"
+        subtitle="Katalog, kategoriya, narx va zaxira holatini bir joydan boshqaring."
+        action={(
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            Yangi mahsulot
+          </Button>
+        )}
+      />
 
       {filteredProducts.length === 0 ? (
         <Alert severity="info">Mahsulotlar yo'q</Alert>
       ) : (
-        <Paper sx={{ overflowX: 'auto' }}>
+        <DataTable
+          title="Mahsulotlar ro'yxati"
+          subtitle="Mahsulot nomi va tavsif bo'yicha tez qidiruv."
+          toolbar={(
+            <TextField
+              fullWidth
+              placeholder="Mahsulot qidirish..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
+        >
           <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableHead>
               <TableRow>
                 <TableCell>Nomi</TableCell>
                 <TableCell>Kategoriya</TableCell>
@@ -191,15 +207,22 @@ export default function ProductsPage() {
                   <TableCell>
                     {categories?.find((c) => c.id === product.categoryId)?.name || '-'}
                   </TableCell>
-                  <TableCell align="right">{(product.price || 0).toLocaleString()} so'm</TableCell>
+                  <TableCell align="right">{(product.basePrice || 0).toLocaleString()} so'm</TableCell>
                   <TableCell align="right">{product.stock}</TableCell>
                   <TableCell>
+                    {(() => {
+                      const statusKey = getProductStatusKey(product.status);
+
+                      return (
                     <Chip
                       label={product.status}
+                      icon={statusIcons[statusKey]}
                       size="small"
-                      color={statusColors[product.status as keyof typeof statusColors]}
-                      variant="outlined"
+                      color={statusColors[statusKey]}
+                      variant="filled"
                     />
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>{dayjs(product.createdAt).format('DD.MM.YYYY')}</TableCell>
                   <TableCell align="center">
@@ -223,7 +246,7 @@ export default function ProductsPage() {
               ))}
             </TableBody>
           </Table>
-        </Paper>
+        </DataTable>
       )}
 
       {/* Create/Edit Dialog */}

@@ -7,16 +7,18 @@ import {
 } from '@mui/material';
 import { ArrowBack as BackIcon } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { contractsApi, customersApi, productsApi } from '../../api';
 import { useMarketStore } from '../../store/market.store';
-import type { Customer } from '../../types';
+import type { Customer, Product } from '../../types';
 
 interface CreateContractForm {
     customerId: string;
-    productIds: string[];
+    productId: string;
+    quantity: number;
     termMonths: number;
     downPayment: number;
+    startDate: string;
     note: string;
 }
 
@@ -24,10 +26,14 @@ export default function CreateContractPage() {
     const navigate = useNavigate();
     const { selectedMarket } = useMarketStore();
     const queryClient = useQueryClient();
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const { register, handleSubmit, formState: { errors } } = useForm<CreateContractForm>();
+    const { control, handleSubmit, formState: { errors } } = useForm<CreateContractForm>({
+        defaultValues: {
+            quantity: 1,
+            startDate: new Date().toISOString().split('T')[0],
+        }
+    });
 
     const marketId = selectedMarket?.id || '';
 
@@ -38,8 +44,7 @@ export default function CreateContractPage() {
         enabled: !!marketId,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    useQuery<any[]>({
+    const { data: products } = useQuery({
         queryKey: ['products', marketId],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         queryFn: () => productsApi.getAll(marketId).then((r: any) => r.data),
@@ -49,31 +54,30 @@ export default function CreateContractPage() {
     const createMutation = useMutation({
         mutationFn: (data: CreateContractForm) =>
             contractsApi.create({
+                marketId,
                 customerId: data.customerId,
-                staffId: '',
                 termMonths: data.termMonths,
                 downPayment: data.downPayment,
-                items: [],
+                startDate: data.startDate,
+                items: [{
+                    productId: data.productId,
+                    quantity: data.quantity,
+                }],
                 note: data.note,
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contracts'] });
             navigate('/contracts');
         },
-        onError: () => {
-            setError('Shartnoma yaratishda xatolik');
+        onError: (err) => {
+            setError((err as any)?.message || 'Shartnoma yaratishda xatolik');
         },
     });
 
-    const onSubmit = async (data: CreateContractForm) => {
-        setLoading(true);
+    const onSubmit = handleSubmit(async (data) => {
         setError('');
-        try {
-            await createMutation.mutateAsync(data);
-        } finally {
-            setLoading(false);
-        }
-    };
+        createMutation.mutate(data);
+    });
 
     if (!marketId) return <Alert severity="info">Iltimos, market tanlang</Alert>;
 
@@ -92,51 +96,137 @@ export default function CreateContractPage() {
 
             <Card>
                 <CardContent>
-                    <form onSubmit={handleSubmit(onSubmit)}>
+                    <form onSubmit={onSubmit}>
                         <Grid container spacing={2} mb={2}>
                             <Grid size={{ xs: 12, md: 6 }}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Mijoz</InputLabel>
-                                    <Select
-                                        {...register('customerId')}
-                                        label="Mijoz"
-                                    >
-                                        {customers?.map((c: Customer) => (
-                                            <MenuItem key={c.id} value={c.id}>{c.fullName}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <TextField
-                                    fullWidth
-                                    label="Muddat (oyda)"
-                                    type="number"
-                                    {...register('termMonths')}
-                                    error={!!errors.termMonths}
-                                    helperText={errors.termMonths?.message}
+                                <Controller
+                                    name="customerId"
+                                    control={control}
+                                    rules={{ required: 'Mijoz majburiy' }}
+                                    render={({ field }) => (
+                                        <FormControl fullWidth error={!!errors.customerId}>
+                                            <InputLabel>Mijoz</InputLabel>
+                                            <Select {...field} label="Mijoz">
+                                                {customers?.map((c: Customer) => (
+                                                    <MenuItem key={c.id} value={c.id}>
+                                                        {c.fullName}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    )}
                                 />
                             </Grid>
 
                             <Grid size={{ xs: 12, md: 6 }}>
-                                <TextField
-                                    fullWidth
-                                    label="Boshlang'ich to'lov"
-                                    type="number"
-                                    {...register('downPayment')}
-                                    error={!!errors.downPayment}
-                                    helperText={errors.downPayment?.message}
+                                <Controller
+                                    name="productId"
+                                    control={control}
+                                    rules={{ required: 'Mahsulot majburiy' }}
+                                    render={({ field }) => (
+                                        <FormControl fullWidth error={!!errors.productId}>
+                                            <InputLabel>Mahsulot</InputLabel>
+                                            <Select {...field} label="Mahsulot">
+                                                {products?.map((p: Product) => (
+                                                    <MenuItem key={p.id} value={p.id}>
+                                                        {p.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    )}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <Controller
+                                    name="quantity"
+                                    control={control}
+                                    rules={{ required: 'Miqdor majburiy', min: 1 }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Miqdor"
+                                            type="number"
+                                            inputProps={{ min: 1 }}
+                                            error={!!errors.quantity}
+                                            helperText={errors.quantity?.message}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <Controller
+                                    name="startDate"
+                                    control={control}
+                                    rules={{ required: 'Boshlash sanasi majburiy' }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Boshlash sanasi"
+                                            type="date"
+                                            InputLabelProps={{ shrink: true }}
+                                            error={!!errors.startDate}
+                                            helperText={errors.startDate?.message}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <Controller
+                                    name="termMonths"
+                                    control={control}
+                                    rules={{ required: 'Muddat majburiy', min: 1 }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Muddat (oyda)"
+                                            type="number"
+                                            inputProps={{ min: 1 }}
+                                            error={!!errors.termMonths}
+                                            helperText={errors.termMonths?.message}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <Controller
+                                    name="downPayment"
+                                    control={control}
+                                    rules={{ required: 'Boshlang\'ich to\'lov majburiy', min: 0 }}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Boshlang'ich to'lov"
+                                            type="number"
+                                            inputProps={{ min: 0 }}
+                                            error={!!errors.downPayment}
+                                            helperText={errors.downPayment?.message}
+                                        />
+                                    )}
                                 />
                             </Grid>
 
                             <Grid size={{ xs: 12 }}>
-                                <TextField
-                                    fullWidth
-                                    label="Izoh"
-                                    multiline
-                                    rows={3}
-                                    {...register('note')}
+                                <Controller
+                                    name="note"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            label="Izoh"
+                                            multiline
+                                            rows={3}
+                                        />
+                                    )}
                                 />
                             </Grid>
                         </Grid>
@@ -148,9 +238,9 @@ export default function CreateContractPage() {
                             <Button
                                 variant="contained"
                                 type="submit"
-                                disabled={loading}
+                                disabled={createMutation.isPending}
                             >
-                                {loading ? <CircularProgress size={24} /> : 'Yaratish'}
+                                {createMutation.isPending ? <CircularProgress size={24} /> : 'Yaratish'}
                             </Button>
                         </Box>
                     </form>
