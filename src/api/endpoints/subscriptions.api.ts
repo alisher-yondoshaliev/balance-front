@@ -4,6 +4,7 @@ export interface SubscriptionPlan {
     id: string;
     name: string;
     price: number;
+    durationDays?: number;
     features: string[];
 }
 
@@ -34,6 +35,9 @@ export interface PaymentInput {
 }
 
 export const subscriptionsApi = {
+    getPlans: () =>
+        api.get<SubscriptionPlan[]>('/subscriptions/plans'),
+
     getCurrent: () =>
         api.get<CurrentSubscription>('/subscriptions/current'),
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { CssBaseline } from '@mui/material';
+import { ThemeProvider } from './store/theme.store';
 import Router from './router';
-import { theme } from './theme';
 import { useAuthInit } from './hooks/useAuthInit';
 import LoadingScreen from './components/common/LoadingScreen';
 import { useAuthStore } from './store/auth.store';
@@ -30,7 +30,7 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider>
       <CssBaseline />
       <AppContent />
     </ThemeProvider>
