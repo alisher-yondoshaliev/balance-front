@@ -17,7 +17,7 @@ import { productsApi } from '../../api';
 import type { CreateProductInput, UpdateProductInput } from '../../api';
 import { useMarketStore } from '../../store/market.store';
 import { categoriesApi } from '../../api/endpoints/categories.api';
-import type { Product, Category } from '../../types';
+import type { Product } from '../../types';
 import dayjs from 'dayjs';
 
 const statusColors: Record<'active' | 'inactive', 'success' | 'error'> = {
@@ -26,7 +26,7 @@ const statusColors: Record<'active' | 'inactive', 'success' | 'error'> = {
 };
 
 export default function ProductsPage() {
-  const navigate = useNavigate();
+
   const { selectedMarket } = useMarketStore();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -46,7 +46,7 @@ export default function ProductsPage() {
   // Fetch categories for dropdown
   const { data: categories } = useQuery({
     queryKey: ['categories', marketId],
-    queryFn: () => categoriesApi.getAll(marketId).then((r) => r.data),
+    queryFn: () => categoriesApi.getCategories({ marketId }).then((r) => r.data),
     enabled: !!marketId,
   });
 
@@ -89,13 +89,7 @@ export default function ProductsPage() {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      productsApi.updateStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    },
-  });
+
 
   const onSubmit = handleSubmit((data) => {
     if (editItem) {
@@ -112,7 +106,7 @@ export default function ProductsPage() {
       setValue('description', product.description);
       setValue('categoryId', product.categoryId);
       setValue('stock', product.stock);
-      setValue('basePrice', product.price);
+      setValue('basePrice', product.price || 0);
     } else {
       setEditItem(null);
       reset();
@@ -197,7 +191,7 @@ export default function ProductsPage() {
                   <TableCell>
                     {categories?.find((c) => c.id === product.categoryId)?.name || '-'}
                   </TableCell>
-                  <TableCell align="right">{product.price.toLocaleString()} so'm</TableCell>
+                  <TableCell align="right">{(product.price || 0).toLocaleString()} so'm</TableCell>
                   <TableCell align="right">{product.stock}</TableCell>
                   <TableCell>
                     <Chip
@@ -239,14 +233,14 @@ export default function ProductsPage() {
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Mahsulot nomi"
                 {...register('name', { required: 'Nomi majburiy' })}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Controller
                 name="categoryId"
                 control={control}
@@ -267,7 +261,7 @@ export default function ProductsPage() {
                 )}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
                 label="Tavsif"
@@ -276,7 +270,7 @@ export default function ProductsPage() {
                 {...register('description')}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 fullWidth
                 label="Narxi"
@@ -285,7 +279,7 @@ export default function ProductsPage() {
                 {...register('basePrice', { valueAsNumber: true })}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }}>
               <TextField
                 fullWidth
                 label="Zaxira"

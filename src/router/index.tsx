@@ -60,6 +60,9 @@ import SubscriptionsPage from '../pages/subscriptions/SubscriptionsPage';
 // Profile
 import ProfilePage from '../pages/profile/ProfilePage';
 
+// Settings
+import SettingsPageNew from '../pages/settings/SettingsPageNew';
+
 /**
  * Root redirect logic - redirects based on auth state
  */
@@ -130,6 +133,7 @@ export default function AppRouter() {
             >
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/settings" element={<SettingsPageNew />} />
 
                 {/* Markets - Available for SUPERADMIN, OWNER, ADMIN */}
                 <Route
@@ -247,6 +251,16 @@ export default function AppRouter() {
                     element={
                         <RoleBasedRoute allowedRoles={['SUPERADMIN', 'OWNER', 'ADMIN']}>
                             <SubscriptionsPage />
+                        </RoleBasedRoute>
+                    }
+                />
+
+                {/* Settings - Available for OWNER */}
+                <Route
+                    path="/settings"
+                    element={
+                        <RoleBasedRoute allowedRoles={['OWNER']}>
+                            <SettingsPageNew />
                         </RoleBasedRoute>
                     }
                 />

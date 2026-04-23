@@ -1,0 +1,106 @@
+src/api/hooks/index.ts(14,5): error TS6133: 'customersApi' is declared but its value is never read.
+src/api/hooks/index.ts(15,5): error TS6133: 'contractsApi' is declared but its value is never read.
+src/api/hooks/index.ts(16,5): error TS6133: 'productsApi' is declared but its value is never read.
+src/api/hooks/index.ts(17,5): error TS6133: 'categoriesApi' is declared but its value is never read.
+src/api/hooks/index.ts(18,5): error TS6133: 'dashboardApi' is declared but its value is never read.
+src/api/hooks/index.ts(19,5): error TS6133: 'subscriptionsApi' is declared but its value is never read.
+src/api/hooks/index.ts(78,24): error TS2552: Cannot find name 'customersAPI'. Did you mean 'customersApi'?
+src/api/hooks/index.ts(88,30): error TS2552: Cannot find name 'customersAPI'. Did you mean 'customersApi'?
+src/api/hooks/index.ts(99,52): error TS2552: Cannot find name 'customersAPI'. Did you mean 'customersApi'?
+src/api/hooks/index.ts(105,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(114,52): error TS2552: Cannot find name 'customersAPI'. Did you mean 'customerId'?
+src/api/hooks/index.ts(124,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(133,37): error TS2552: Cannot find name 'customersAPI'. Did you mean 'customersApi'?
+src/api/hooks/index.ts(138,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(154,24): error TS2552: Cannot find name 'contractsAPI'. Did you mean 'contractsApi'?
+src/api/hooks/index.ts(163,30): error TS2552: Cannot find name 'contractsAPI'. Did you mean 'contractsApi'?
+src/api/hooks/index.ts(174,52): error TS2552: Cannot find name 'contractsAPI'. Did you mean 'contractsApi'?
+src/api/hooks/index.ts(179,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(189,13): error TS2552: Cannot find name 'contractsAPI'. Did you mean 'contractId'?
+src/api/hooks/index.ts(197,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(206,37): error TS2552: Cannot find name 'contractsAPI'. Did you mean 'contractsApi'?
+src/api/hooks/index.ts(211,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(227,24): error TS2304: Cannot find name 'productsAPI'.
+src/api/hooks/index.ts(236,30): error TS2304: Cannot find name 'productsAPI'.
+src/api/hooks/index.ts(247,51): error TS2304: Cannot find name 'productsAPI'.
+src/api/hooks/index.ts(252,52): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(262,13): error TS2304: Cannot find name 'productsAPI'.
+src/api/hooks/index.ts(270,52): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(279,37): error TS2304: Cannot find name 'productsAPI'.
+src/api/hooks/index.ts(284,52): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(300,24): error TS2304: Cannot find name 'categoriesAPI'.
+src/api/hooks/index.ts(310,28): error TS2304: Cannot find name 'CreateCategoryInput'.
+src/api/hooks/index.ts(310,52): error TS2304: Cannot find name 'categoriesAPI'.
+src/api/hooks/index.ts(315,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(324,36): error TS2304: Cannot find name 'CreateCategoryInput'.
+src/api/hooks/index.ts(325,13): error TS2304: Cannot find name 'categoriesAPI'.
+src/api/hooks/index.ts(330,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(339,37): error TS2304: Cannot find name 'categoriesAPI'.
+src/api/hooks/index.ts(344,53): error TS2304: Cannot find name 'handleApiError'.
+src/api/hooks/index.ts(356,36): error TS2304: Cannot find name 'dashboardAPI'.
+src/api/hooks/index.ts(371,24): error TS2304: Cannot find name 'subscriptionsAPI'.
+src/components/subscriptions/PaymentModal.tsx(106,47): error TS2339: Property 'description' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PaymentModal.tsx(108,55): error TS2339: Property 'description' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PaymentModal.tsx(123,43): error TS2339: Property 'duration' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PaymentModal.tsx(125,51): error TS2339: Property 'duration' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PlanCard.tsx(24,33): error TS2307: Cannot find module '../../utils/planFeatures' or its corresponding type declarations.
+src/components/subscriptions/PlanCard.tsx(116,52): error TS7006: Parameter 'feature' implicitly has an 'any' type.
+src/components/subscriptions/PlanCard.tsx(116,61): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/components/subscriptions/PlanDetailDialog.tsx(25,32): error TS2307: Cannot find module '../../hooks/useSubscriptions' or its corresponding type declarations.
+src/components/subscriptions/PlanDetailDialog.tsx(26,33): error TS2307: Cannot find module '../../utils/planFeatures' or its corresponding type declarations.
+src/components/subscriptions/PlanDetailDialog.tsx(122,56): error TS7006: Parameter 'feature' implicitly has an 'any' type.
+src/components/subscriptions/PlanDetailDialog.tsx(122,65): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/components/subscriptions/PricingCards.tsx(69,31): error TS2339: Property 'isPopular' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PricingCards.tsx(87,35): error TS2339: Property 'description' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PricingCards.tsx(88,81): error TS2339: Property 'description' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PricingCards.tsx(99,39): error TS2339: Property 'duration' does not exist on type 'SubscriptionPlan'.
+src/components/subscriptions/PricingCards.tsx(101,47): error TS2339: Property 'duration' does not exist on type 'SubscriptionPlan'.
+src/pages/admin/AdminPlansPage.tsx(14,8): error TS2307: Cannot find module '../../hooks/useSubscriptions' or its corresponding type declarations.
+src/pages/admin/AdminPlansPage.tsx(169,52): error TS7006: Parameter 'plan' implicitly has an 'any' type.
+src/pages/dashboard/SubscriptionPage.tsx(9,43): error TS2307: Cannot find module '../../hooks/useSubscriptions' or its corresponding type declarations.
+src/pages/products/ProductsPage.tsx(2,1): error TS6133: 'useNavigate' is declared but its value is never read.
+src/pages/subscriptions/SubscriptionHistoryPage.tsx(26,70): error TS2307: Cannot find module '../../hooks/useSubscriptions' or its corresponding type declarations.
+src/pages/subscriptions/SubscriptionPlansPage.tsx(9,99): error TS2307: Cannot find module '../../hooks/useSubscriptions' or its corresponding type declarations.
+src/pages/subscriptions/SubscriptionsPage.tsx(11,14): error TS6133: 'HistoryIcon' is declared but its value is never read.
+src/pages/subscriptions/SubscriptionsPage.tsx(82,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; sm: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; sm: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/subscriptions/SubscriptionsPage.tsx(88,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; sm: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; sm: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/subscriptions/SubscriptionsPage.tsx(97,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; sm: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; sm: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/subscriptions/SubscriptionsPage.tsx(103,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; sm: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; sm: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/subscriptions/SubscriptionsPage.tsx(109,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; sm: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; sm: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/subscriptions/SubscriptionsPage.tsx(115,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; sm: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; sm: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+src/pages/subscriptions/SubscriptionsPage.tsx(193,14): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<...> & Omit<...>): Element | null', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element | null', gave the following error.
+    Type '{ children: Element; item: true; xs: number; }' is not assignable to type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
+      Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps & { sx?: SxProps<Theme> | undefined; } & SystemProps<Theme> & Omit<...>'.
