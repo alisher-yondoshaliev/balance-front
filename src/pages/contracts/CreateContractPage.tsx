@@ -11,6 +11,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { contractsApi, customersApi, productsApi } from '../../api';
 import { useMarketStore } from '../../store/market.store';
 import type { Customer, Product } from '../../types';
+import type { CreateContractInput } from '../../api/endpoints/contracts.api';
 
 interface CreateContractForm {
     customerId: string;
@@ -52,19 +53,7 @@ export default function CreateContractPage() {
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: CreateContractForm) =>
-            contractsApi.create({
-                marketId,
-                customerId: data.customerId,
-                termMonths: data.termMonths,
-                downPayment: data.downPayment,
-                startDate: data.startDate,
-                items: [{
-                    productId: data.productId,
-                    quantity: data.quantity,
-                }],
-                note: data.note,
-            }),
+        mutationFn: (data: CreateContractInput) => contractsApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contracts'] });
             navigate('/contracts');
@@ -76,7 +65,20 @@ export default function CreateContractPage() {
 
     const onSubmit = handleSubmit(async (data) => {
         setError('');
-        createMutation.mutate(data);
+        const payload: CreateContractInput = {
+            marketId,
+            customerId: data.customerId,
+            termMonths: Number(data.termMonths),
+            downPayment: Number(data.downPayment),
+            startDate: data.startDate,
+            items: [{
+                productId: data.productId,
+                quantity: Number(data.quantity),
+            }],
+            note: data.note,
+        };
+
+        createMutation.mutate(payload);
     });
 
     if (!marketId) return <Alert severity="info">Iltimos, market tanlang</Alert>;
