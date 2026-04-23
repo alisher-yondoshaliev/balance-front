@@ -2,10 +2,11 @@ import api from '../axios';
 import type { Contract, Installment } from '../../types';
 
 export interface CreateContractInput {
+    marketId: string;
     customerId: string;
-    staffId: string;
     termMonths: number;
     downPayment: number;
+    startDate: string;
     items: Array<{ productId: string; quantity: number }>;
     note?: string;
 }

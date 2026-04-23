@@ -164,9 +164,9 @@ export const AdminPlansPage: React.FC = () => {
                 )}
 
                 {/* Plans Grid */}
-                {plansQuery.data?.data && plansQuery.data.data.length > 0 ? (
+                {plansQuery.data && plansQuery.data.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {plansQuery.data.data.map((plan) => (
+                        {plansQuery.data.map((plan) => (
                             <div key={plan.id} className="relative">
                                 <PlanCard
                                     plan={plan}

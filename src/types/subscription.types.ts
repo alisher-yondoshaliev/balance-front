@@ -64,7 +64,6 @@ export interface SubscriptionHistory {
 
 export interface PaymentInput {
     planId: string;
-    paymentMethod?: string;
 }
 
 export interface PaymentResponse {

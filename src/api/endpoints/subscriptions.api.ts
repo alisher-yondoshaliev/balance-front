@@ -4,46 +4,95 @@ export interface SubscriptionPlan {
     id: string;
     name: string;
     price: number;
-    durationDays?: number;
-    features: string[];
+    duration: number;
+    description?: string | null;
+    isActive: boolean;
 }
 
 export interface CurrentSubscription {
-    id: string;
-    planId: string;
+    id?: string;
     plan: SubscriptionPlan;
-    status: 'active' | 'inactive' | 'expired';
-    startDate: string;
-    endDate: string;
-    renewalDate: string;
+    subEndDate: string;
+    isActive: boolean;
+    daysLeft: number;
+    subStartDate?: string | null;
 }
 
-export interface SubscriptionHistory {
+export interface SubscriptionHistoryItem {
     id: string;
     planId: string;
-    plan: SubscriptionPlan;
-    status: 'active' | 'inactive' | 'expired' | 'cancelled';
-    startDate: string;
-    endDate: string;
+    plan?: SubscriptionPlan | null;
     amount: number;
     paymentDate: string;
+    paymentMethod?: string;
+    status?: string;
+    subStartDate?: string;
+    subEndDate?: string;
 }
 
 export interface PaymentInput {
     planId: string;
-    paymentMethod: string;
 }
 
+export interface SubscriptionPaymentResponse {
+    message?: string;
+    [key: string]: unknown;
+}
+
+export interface SubscriptionActionResponse {
+    message?: string;
+    [key: string]: unknown;
+}
+
+export type CurrentSubscriptionApiResponse =
+    | CurrentSubscription
+    | { subscription: CurrentSubscription | null }
+    | null;
+
+export type SubscriptionHistoryApiResponse =
+    | { items: SubscriptionHistoryItem[] }
+    | SubscriptionHistoryItem[];
+
+export const normalizeCurrentSubscription = (
+    data: CurrentSubscriptionApiResponse,
+): CurrentSubscription | null => {
+    if (!data) {
+        return null;
+    }
+
+    if ('subscription' in data) {
+        return data.subscription ?? null;
+    }
+
+    return data;
+};
+
+export const normalizeSubscriptionHistory = (
+    data: SubscriptionHistoryApiResponse | null | undefined,
+): SubscriptionHistoryItem[] => {
+    if (!data) {
+        return [];
+    }
+
+    if (Array.isArray(data)) {
+        return data;
+    }
+
+    return Array.isArray(data.items) ? data.items : [];
+};
+
 export const subscriptionsApi = {
-    getPlans: () =>
-        api.get<SubscriptionPlan[]>('/subscriptions/plans'),
+    getPlans: () => api.get<SubscriptionPlan[]>('/subscriptions/plans'),
 
     getCurrent: () =>
-        api.get<CurrentSubscription>('/subscriptions/current'),
+        api.get<CurrentSubscriptionApiResponse>('/subscriptions/current'),
 
     getHistory: () =>
-        api.get<{ items: SubscriptionHistory[] }>('/subscriptions/history'),
+        api.get<SubscriptionHistoryApiResponse>('/subscriptions/history'),
 
     pay: (data: PaymentInput) =>
-        api.post('/subscriptions/pay', data),
+        api.post<SubscriptionPaymentResponse>('/subscriptions/pay', data),
+
+    cancel: () =>
+        api.post<SubscriptionActionResponse>('/subscriptions/cancel'),
 };

@@ -33,14 +33,15 @@ export interface UserResource {
 
 // Market User interface (from GET /api/markets/:id/users endpoint)
 export interface MarketUser {
-    id: number;
+    id: string;
     fullName: string;
     phone?: string;
     email: string;
     role: string;
-    status: 'active' | 'inactive';
-    marketId: number;
+    status: 'ACTIVE' | 'INACTIVE' | 'active' | 'inactive';
+    marketId: string;
     createdAt: string;
+    updatedAt?: string;
 }
 
 // Pagination meta from backend
@@ -62,7 +63,7 @@ export interface MarketUsersQueryParams {
     page?: number;
     limit?: number;
     search?: string;
-    status?: 'active' | 'inactive';
+    status?: 'ACTIVE' | 'INACTIVE';
     role?: string;
     sortBy?: string;
     order?: 'asc' | 'desc';
@@ -103,7 +104,8 @@ export interface Product {
     id: string;
     name: string;
     description?: string;
-    price: number;
+    basePrice: number;
+    price?: number;
     originalPrice?: number;
     image?: string;
     categoryId: string;

@@ -4,7 +4,7 @@ import {
     Box, Typography, Button, Table, TableBody, TableCell,
     TableHead, TableRow, Paper, IconButton, TextField,
     Dialog, DialogTitle, DialogContent, DialogActions,
-    CircularProgress, Alert, InputAdornment, Chip,
+    CircularProgress, Alert, InputAdornment, Chip, Snackbar,
 } from '@mui/material';
 import {
     Add as AddIcon, Edit as EditIcon,
@@ -18,6 +18,9 @@ import type { CreateCustomerInput, UpdateCustomerInput } from '../../api';
 import { useMarketStore } from '../../store/market.store';
 import type { Customer } from '../../types';
 import dayjs from 'dayjs';
+import { extractApiErrorMessage } from '../../api/error';
+import PageHeader from '../../components/common/PageHeader';
+import DataTable from '../../components/common/DataTable';
 
 export default function CustomersPage() {
     const navigate = useNavigate();
@@ -26,6 +29,8 @@ export default function CustomersPage() {
     const [open, setOpen] = useState(false);
     const [editItem, setEditItem] = useState<Customer | null>(null);
     const [search, setSearch] = useState('');
+    const [dialogError, setDialogError] = useState('');
+    const [submitSuccessMessage, setSubmitSuccessMessage] = useState('');
 
     const marketId = selectedMarket?.id || '';
 
@@ -35,14 +40,32 @@ export default function CustomersPage() {
         enabled: !!marketId,
     });
 
-    const { register, handleSubmit, reset, setValue } = useForm<CreateCustomerInput>();
+    const {
+        register,
+        handleSubmit,
+        reset,
+        setValue,
+        setError,
+        clearErrors,
+        formState: { errors },
+    } = useForm<CreateCustomerInput>();
 
     const createMutation = useMutation({
         mutationFn: (data: CreateCustomerInput & { marketId: string }) => customersApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             setOpen(false);
+            setDialogError('');
+            setSubmitSuccessMessage("Mijoz muvaffaqiyatli qo'shildi");
             reset();
+        },
+        onError: (error) => {
+            const message = extractApiErrorMessage(error, "Mijozni saqlab bo'lmadi");
+            setDialogError(message);
+
+            if (message.toLowerCase().includes('passport')) {
+                setError('passportSeria', { type: 'server', message });
+            }
         },
     });
 
@@ -52,7 +75,17 @@ export default function CustomersPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             setOpen(false);
+            setDialogError('');
+            setSubmitSuccessMessage('Mijoz muvaffaqiyatli yangilandi');
             reset();
+        },
+        onError: (error) => {
+            const message = extractApiErrorMessage(error, "Mijozni yangilab bo'lmadi");
+            setDialogError(message);
+
+            if (message.toLowerCase().includes('passport')) {
+                setError('passportSeria', { type: 'server', message });
+            }
         },
     });
 
@@ -62,6 +95,10 @@ export default function CustomersPage() {
     });
 
     const onSubmit = (data: CreateCustomerInput) => {
+        clearErrors();
+        setDialogError('');
+        setSubmitSuccessMessage('');
+
         if (editItem) {
             updateMutation.mutate({ id: editItem.id, data });
         } else {
@@ -71,6 +108,8 @@ export default function CustomersPage() {
 
     const handleEdit = (customer: Customer) => {
         setEditItem(customer);
+        setDialogError('');
+        setSubmitSuccessMessage('');
         setValue('fullName', customer.fullName);
         if (customer.phone) setValue('phone', customer.phone);
         if (customer.address) setValue('address', customer.address);
@@ -82,6 +121,8 @@ export default function CustomersPage() {
     const handleClose = () => {
         setOpen(false);
         setEditItem(null);
+        setDialogError('');
+        clearErrors();
         reset();
     };
 
@@ -95,23 +136,30 @@ export default function CustomersPage() {
 
     return (
         <Box>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h5" fontWeight="bold">Mijozlar</Typography>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
-                    Mijoz qo'shish
-                </Button>
-            </Box>
-
-            <TextField
-                fullWidth
-                placeholder="Ism yoki telefon bo'yicha qidirish..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
-                sx={{ mb: 2 }}
+            <PageHeader
+                eyebrow="Customers"
+                title="Mijozlar"
+                subtitle="Mijozlar bazasi, passport ma'lumotlari va shartnoma faolligini boshqaring."
+                action={(
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
+                        Mijoz qo'shish
+                    </Button>
+                )}
             />
 
-            <Paper>
+            <DataTable
+                title="Mijozlar ro'yxati"
+                subtitle="Ism, telefon va passport bo'yicha tez qidiruv."
+                toolbar={(
+                    <TextField
+                        fullWidth
+                        placeholder="Ism yoki telefon bo'yicha qidirish..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+                    />
+                )}
+            >
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -149,26 +197,59 @@ export default function CustomersPage() {
                         ))}
                     </TableBody>
                 </Table>
-            </Paper>
+            </DataTable>
 
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <DialogTitle>{editItem ? 'Mijoz tahrirlash' : 'Yangi mijoz'}</DialogTitle>
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <DialogContent>
+                        {dialogError ? (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {dialogError}
+                            </Alert>
+                        ) : null}
+
                         <TextField fullWidth label="To'liq ism" {...register('fullName')} sx={{ mb: 2 }} required />
                         <TextField fullWidth label="Telefon" {...register('phone')} sx={{ mb: 2 }} required />
                         <TextField fullWidth label="Manzil" {...register('address')} sx={{ mb: 2 }} />
-                        <TextField fullWidth label="Passport seriya" {...register('passportSeria')} sx={{ mb: 2 }} />
+                        <TextField
+                            fullWidth
+                            label="Passport seriya"
+                            {...register('passportSeria')}
+                            sx={{ mb: 2 }}
+                            error={!!errors.passportSeria}
+                            helperText={errors.passportSeria?.message}
+                        />
                         <TextField fullWidth label="Izoh" {...register('note')} multiline rows={2} />
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleClose}>Bekor qilish</Button>
-                        <Button type="submit" variant="contained">
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={createMutation.isPending || updateMutation.isPending}
+                        >
                             {editItem ? 'Saqlash' : 'Qo\'shish'}
                         </Button>
                     </DialogActions>
                 </form>
             </Dialog>
+
+            <Snackbar
+                open={!!submitSuccessMessage}
+                autoHideDuration={4000}
+                onClose={() => setSubmitSuccessMessage('')}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    severity="success"
+                    variant="filled"
+                    onClose={() => setSubmitSuccessMessage('')}
+                    sx={{ width: '100%' }}
+                >
+                    {submitSuccessMessage}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

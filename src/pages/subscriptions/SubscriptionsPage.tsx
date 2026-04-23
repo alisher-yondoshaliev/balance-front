@@ -1,376 +1,658 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Box, Typography, Button, Card, CardContent,
-  Table, TableBody, TableCell, TableHead, TableRow, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  CircularProgress, Alert, Chip, Select, MenuItem,
-  FormControl, InputLabel, Snackbar, Skeleton
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CardHeader,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Grid,
+    Paper,
+    Skeleton,
+    Snackbar,
+    Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Typography,
 } from '@mui/material';
 import {
-  CheckCircle as CheckCircleIcon,
-  CreditCard as CreditCardIcon,
+    Block as BlockIcon,
+    CheckCircle as CheckCircleIcon,
+    CreditCard as CreditCardIcon,
 } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
-import { subscriptionsApi } from '../../api/endpoints/subscriptions.api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import { extractApiErrorMessage } from '../../api/error';
+import {
+    normalizeCurrentSubscription,
+    normalizeSubscriptionHistory,
+    subscriptionsApi,
+    type PaymentInput,
+    type SubscriptionHistoryItem,
+    type SubscriptionPlan,
+} from '../../api/endpoints/subscriptions.api';
+import PageHeader from '../../components/common/PageHeader';
+
+const ACTIVE_SUBSCRIPTION_MESSAGE =
+    'Yangi obuna olish uchun avval joriy obunani bekor qiling.';
+
+type HistoryWithAliases = SubscriptionHistoryItem & {
+    startDate?: string;
+    endDate?: string;
+    createdAt?: string;
+};
+
+const formatCurrency = (amount?: number) =>
+    Number(amount ?? 0).toLocaleString('uz-UZ');
+
+const formatDate = (value?: string) =>
+    value ? dayjs(value).format('DD.MM.YYYY') : '—';
+
+const formatDateTime = (value?: string) =>
+    value ? dayjs(value).format('DD.MM.YYYY HH:mm') : '—';
+
+const getHistoryDates = (item: SubscriptionHistoryItem) => {
+    const historyItem = item as HistoryWithAliases;
+
+    return {
+        startDate: historyItem.startDate ?? historyItem.subStartDate,
+        endDate: historyItem.endDate ?? historyItem.subEndDate,
+        paidDate: historyItem.createdAt ?? historyItem.paymentDate,
+    };
+};
 
 export default function SubscriptionsPage() {
-  const queryClient = useQueryClient();
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string>('');
+    const queryClient = useQueryClient();
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [cancelOpen, setCancelOpen] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+    const [toast, setToast] = useState<{
+        open: boolean;
+        message: string;
+        severity: 'success' | 'error' | 'info';
+    }>({
+        open: false,
+        message: '',
+        severity: 'success',
+    });
 
-  // Toast state
-  const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+    const currentQuery = useQuery({
+        queryKey: ['subscriptions-current'],
+        queryFn: async () =>
+            normalizeCurrentSubscription((await subscriptionsApi.getCurrent()).data),
+        retry: false,
+    });
 
-  // Fetch current subscription
-  const { data: currentSubResponse, isLoading: isLoadingCurrent } = useQuery({
-    queryKey: ['subscriptions-current'],
-    queryFn: () => subscriptionsApi.getCurrent(),
-    retry: false
-  });
-  const currentSub = currentSubResponse?.data;
+    const plansQuery = useQuery({
+        queryKey: ['subscriptions-plans'],
+        queryFn: async () => (await subscriptionsApi.getPlans()).data,
+    });
 
-  // Fetch available plans
-  const { data: plansResponse, isLoading: isLoadingPlans } = useQuery({
-    queryKey: ['subscriptions-plans'],
-    queryFn: () => subscriptionsApi.getPlans(),
-  });
-  const plans = plansResponse?.data || [];
+    const historyQuery = useQuery({
+        queryKey: ['subscriptions-history'],
+        queryFn: async () =>
+            normalizeSubscriptionHistory((await subscriptionsApi.getHistory()).data),
+    });
 
-  // Fetch subscription history
-  const { data: historyResponse, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['subscriptions-history'],
-    queryFn: () => subscriptionsApi.getHistory(),
-  });
-  const history = historyResponse?.data?.items || [];
-
-  const { control, reset, handleSubmit } = useForm({
-    defaultValues: {
-      paymentMethod: 'credit_card'
-    }
-  });
-
-  const payMutation = useMutation({
-    mutationFn: (data: { planId: string; paymentMethod: string }) =>
-      subscriptionsApi.pay(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions-current'] });
-      queryClient.invalidateQueries({ queryKey: ['subscriptions-history'] });
-      setPaymentOpen(false);
-      reset();
-      setToast({ open: true, message: "To'lov muvaffaqiyatli amalga oshirildi!", severity: 'success' });
-    },
-    onError: () => {
-      setToast({ open: true, message: "To'lovda xatolik yuz berdi. Qaytadan urinib ko'ring.", severity: 'error' });
-    }
-  });
-
-  const handleSubscribeClick = (planId: string) => {
-    setSelectedPlan(planId);
-    setPaymentOpen(true);
-  };
-
-  const onSubmitPayment = (data: { paymentMethod: string }) => {
-    if (selectedPlan) {
-      payMutation.mutate({
-        planId: selectedPlan,
-        paymentMethod: data.paymentMethod,
-      });
-    }
-  };
-
-  const isAnyLoading = isLoadingCurrent || isLoadingPlans || isLoadingHistory;
-
-  if (isAnyLoading) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Skeleton variant="text" width="200px" height={40} sx={{ mb: 4 }} />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-          <Box>
-            <Skeleton variant="rectangular" height={250} sx={{ borderRadius: 2 }} />
-          </Box>
-          <Box>
-            <Skeleton variant="rectangular" height={250} sx={{ borderRadius: 2 }} />
-          </Box>
-          <Box>
-            <Skeleton variant="rectangular" height={250} sx={{ borderRadius: 2 }} />
-          </Box>
-        </Box>
-      </Box>
+    const subscription = currentQuery.data ?? null;
+    const isSubActive = subscription?.isActive === true;
+    const plans = useMemo(
+        () => (plansQuery.data ?? []).filter((plan) => plan.isActive !== false),
+        [plansQuery.data],
     );
-  }
+    const history = historyQuery.data ?? [];
 
-  const isSubActive = currentSub?.status === 'active';
+    const refreshSubscriptionData = async () => {
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['subscriptions-current'] }),
+            queryClient.invalidateQueries({ queryKey: ['subscriptions-plans'] }),
+            queryClient.invalidateQueries({ queryKey: ['subscriptions-history'] }),
+        ]);
+    };
 
-  return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: { xs: 2, sm: 3 } }}>
-      <Typography variant="h4" fontWeight="bold" mb={4} color="text.primary">
-        Obunani Boshqarish
-      </Typography>
+    const payMutation = useMutation({
+        mutationFn: (payload: PaymentInput) => subscriptionsApi.pay(payload),
+        onSuccess: async (response) => {
+            await refreshSubscriptionData();
+            setConfirmOpen(false);
+            setSelectedPlan(null);
+            setToast({
+                open: true,
+                message:
+                    typeof response.data?.message === 'string' && response.data.message.trim()
+                        ? response.data.message
+                        : "To'lov muvaffaqiyatli amalga oshirildi!",
+                severity: 'success',
+            });
+        },
+        onError: (error) => {
+            setToast({
+                open: true,
+                message: extractApiErrorMessage(
+                    error,
+                    "To'lovni amalga oshirib bo'lmadi.",
+                ),
+                severity: 'error',
+            });
+        },
+    });
 
-      {/* 1. CURRENT SUBSCRIPTION */}
-      <Box mb={6}>
-        <Typography variant="h6" fontWeight="bold" mb={2}>
-          Joriy obuna
-        </Typography>
-        {currentSub && isSubActive ? (
-          <Card elevation={0} sx={{ border: '2px solid', borderColor: 'primary.main', borderRadius: 3, bgcolor: 'primary.50' }}>
-            <CardContent sx={{ p: 4 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 4, alignItems: 'center' }}>
-                <Box>
-                  <Typography color="primary.main" fontWeight="bold" variant="overline">
-                    Faol Tarif
-                  </Typography>
-                  <Typography variant="h3" fontWeight="bold" color="text.primary" mt={1}>
-                    {currentSub.plan?.name || 'Standard'}
-                  </Typography>
-                  <Typography variant="h6" color="text.secondary" mt={1}>
-                    {currentSub.plan?.price?.toLocaleString() || 0} so'm
-                  </Typography>
-                </Box>
-                <Box sx={{ xs: 12, md: 6 }}>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr' }, gap: 2 }}>
-                    <Box>
-                      <Typography color="text.secondary" variant="body2">Status</Typography>
-                      <Chip
-                        label="Faol"
-                        color="success"
-                        size="small"
-                        sx={{ mt: 0.5, fontWeight: 'bold' }}
-                      />
-                    </Box>
-                    <Box>
-                      <Typography color="text.secondary" variant="body2">Amal qilish muddati</Typography>
-                      <Typography fontWeight="medium" mt={0.5}>
-                        {dayjs(currentSub.endDate).format('DD.MM.YYYY')}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography color="text.secondary" variant="body2">Boshlangan sana</Typography>
-                      <Typography fontWeight="medium" mt={0.5}>
-                        {dayjs(currentSub.startDate).format('DD.MM.YYYY')}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography color="text.secondary" variant="body2">Yangilash sanasi</Typography>
-                      <Typography fontWeight="medium" mt={0.5}>
-                        {dayjs(currentSub.renewalDate).format('DD.MM.YYYY')}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-      ) : (
-      <Alert severity="warning" sx={{ borderRadius: 2 }}>
-        Sizda hozircha faol obuna yo'q. Iltimos quyidagi tariflardan birini tanlang.
-      </Alert>
-        )}
-    </Box>
+    const cancelMutation = useMutation({
+        mutationFn: () => subscriptionsApi.cancel(),
+        onSuccess: async (response) => {
+            await refreshSubscriptionData();
+            setCancelOpen(false);
+            setConfirmOpen(false);
+            setSelectedPlan(null);
+            setToast({
+                open: true,
+                message:
+                    typeof response.data?.message === 'string' && response.data.message.trim()
+                        ? response.data.message
+                        : 'Obuna muvaffaqiyatli bekor qilindi.',
+                severity: 'success',
+            });
+        },
+        onError: (error) => {
+            setToast({
+                open: true,
+                message: extractApiErrorMessage(
+                    error,
+                    "Obunani bekor qilib bo'lmadi.",
+                ),
+                severity: 'error',
+            });
+        },
+    });
 
-      {/* 2. AVAILABLE PLANS */ }
-  <Box mb={6}>
-    <Typography variant="h6" fontWeight="bold" mb={3}>
-      Mavjud Ta'riflar
-    </Typography>
-    {plans.length === 0 ? (
-      <Typography color="text.secondary">Tariflar topilmadi.</Typography>
-    ) : (
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
-        {plans.map((plan) => {
-          const isCurrentPlan = currentSub?.planId === plan.id && isSubActive;
+    const handleSubscribeClick = (plan: SubscriptionPlan) => {
+        if (isSubActive) {
+            setToast({
+                open: true,
+                message: ACTIVE_SUBSCRIPTION_MESSAGE,
+                severity: 'info',
+            });
+            return;
+        }
 
-          return (
-            <Box key={plan.id}>
-              <Card
-                elevation={0}
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: '1px solid',
-                  borderColor: isCurrentPlan ? 'primary.main' : 'divider',
-                  borderRadius: 3,
-                  position: 'relative',
-                  transition: 'transform 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 2
-                  }
-                }}
-              >
-                {isCurrentPlan && (
-                  <Box sx={{ position: 'absolute', top: 12, right: 12 }}>
-                    <Chip label="Joriy Tarif" color="primary" size="small" />
-                  </Box>
-                )}
-                <CardContent sx={{ flexGrow: 1, p: 4 }}>
-                  <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    {plan.name}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 3 }}>
-                    <Typography variant="h4" fontWeight="bold" color="text.primary">
-                      {plan.price.toLocaleString()} so'm
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ ml: 1 }}>
-                      / {plan.durationDays || 30} kun
-                    </Typography>
-                  </Box>
+        setSelectedPlan(plan);
+        setConfirmOpen(true);
+    };
 
-                  <Box sx={{ mb: 4 }}>
-                    {plan.features?.map((feature, idx) => (
-                      <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                        <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20, mr: 1.5 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {feature}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </CardContent>
-                <Box sx={{ p: 3, pt: 0 }}>
-                  <Button
-                    fullWidth
-                    variant={isCurrentPlan ? "outlined" : "contained"}
-                    color="primary"
-                    size="large"
-                    startIcon={!isCurrentPlan && <CreditCardIcon />}
-                    disabled={isCurrentPlan}
-                    onClick={() => handleSubscribeClick(plan.id)}
-                    sx={{ borderRadius: 2, textTransform: 'none', py: 1.5, fontWeight: 'bold' }}
-                  >
-                    {isCurrentPlan ? "Faol" : "Obuna bo'lish"}
-                  </Button>
-                </Box>
-              </Card>
+    const handleConfirmPay = () => {
+        if (!selectedPlan) {
+            return;
+        }
+
+        if (isSubActive) {
+            setConfirmOpen(false);
+            setSelectedPlan(null);
+            setToast({
+                open: true,
+                message: ACTIVE_SUBSCRIPTION_MESSAGE,
+                severity: 'info',
+            });
+            return;
+        }
+
+        payMutation.mutate({ planId: selectedPlan.id });
+    };
+
+    const isAnyLoading =
+        currentQuery.isLoading || plansQuery.isLoading || historyQuery.isLoading;
+
+    if (isAnyLoading) {
+        return (
+            <Box sx={{ maxWidth: 1200, mx: 'auto', p: { xs: 2, sm: 3 } }}>
+                <Stack spacing={3}>
+                    <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
+                    <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 1 }} />
+                    <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 1 }} />
+                </Stack>
             </Box>
-          );
-        })}
-      </Box>
-    )}
-  </Box>
+        );
+    }
 
-  {/* 3. PAYMENT HISTORY */ }
-  <Box>
-    <Typography variant="h6" fontWeight="bold" mb={3}>
-      To'lov tarixi
-    </Typography>
-    {history.length > 0 ? (
-      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
-        <Table>
-          <TableHead sx={{ bgcolor: 'background.default' }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold' }}>Tarif nomi</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>To'lov sanasi</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Holat</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>Miqdor</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {history.map((item) => (
-              <TableRow key={item.id} hover>
-                <TableCell>{item.plan?.name || 'Unknown'}</TableCell>
-                <TableCell>{dayjs(item.paymentDate).format('DD.MM.YYYY HH:mm')}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={item.status}
-                    size="small"
-                    color={item.status === 'active' ? 'success' : (item.status === 'expired' ? 'error' : 'default')}
-                    sx={{ textTransform: 'capitalize' }}
-                  />
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'medium' }}>
-                  {item.amount?.toLocaleString()} so'm
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-    ) : (
-      <Paper elevation={0} sx={{ p: 4, textAlign: 'center', border: '1px dashed', borderColor: 'divider', borderRadius: 3 }}>
-        <Typography color="text.secondary">
-          Sizda hozircha to'lov tarixi mavjud emas.
-        </Typography>
-      </Paper>
-    )}
-  </Box>
+    return (
+        <Box sx={{ maxWidth: 1200, mx: 'auto', p: { xs: 2, sm: 3 } }}>
+            <Stack spacing={3}>
+                <PageHeader
+                    eyebrow="Subscriptions"
+                    title="Obunalar"
+                    subtitle="Tariflar, faol obuna va to'lov tarixini bir ekranda boshqaring."
+                />
 
-  {/* PAYMENT DIALOG */ }
-  <Dialog
-    open={paymentOpen}
-    onClose={() => !payMutation.isPending && setPaymentOpen(false)}
-    maxWidth="sm"
-    fullWidth
-    PaperProps={{ sx: { borderRadius: 3 } }}
-  >
-    <DialogTitle sx={{ fontWeight: 'bold', pb: 1 }}>
-      To'lovni amalga oshirish
-    </DialogTitle>
-    <DialogContent>
-      <Typography color="text.secondary" mb={3}>
-        Iltimos, o'zingizga qulay to'lov usulini tanlang.
-      </Typography>
-      <form id="payment-form" onSubmit={handleSubmit(onSubmitPayment)}>
-        <Controller
-          name="paymentMethod"
-          control={control}
-          render={({ field }) => (
-            <FormControl fullWidth>
-              <InputLabel>To'lov usuli</InputLabel>
-              <Select {...field} label="To'lov usuli">
-                <MenuItem value="credit_card">Kredit karta (Uzcard/Humo)</MenuItem>
-                <MenuItem value="bank_transfer">Bank o'tkazmasi</MenuItem>
-                <MenuItem value="cash">Naqd pul</MenuItem>
-              </Select>
-            </FormControl>
-          )}
-        />
-      </form>
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 3 }}>
-      <Button
-        onClick={() => setPaymentOpen(false)}
-        disabled={payMutation.isPending}
-        sx={{ textTransform: 'none' }}
-      >
-        Bekor qilish
-      </Button>
-      <Button
-        type="submit"
-        form="payment-form"
-        variant="contained"
-        disabled={payMutation.isPending}
-        startIcon={payMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <CreditCardIcon />}
-        sx={{ textTransform: 'none', px: 3 }}
-      >
-        {payMutation.isPending ? "To'lov qilinmoqda..." : "To'lash"}
-      </Button>
-    </DialogActions>
-  </Dialog>
+                <Card>
+                    <CardHeader
+                        title="Joriy Obuna"
+                        subheader="Sizning aktual obuna rejimi"
+                    />
+                    <CardContent>
+                        {isSubActive && subscription ? (
+                            <Grid container spacing={3}>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <Stack spacing={1}>
+                                        <Typography color="primary" fontWeight="bold" variant="overline">
+                                            Faol Tarif
+                                        </Typography>
+                                        <Typography variant="h4" fontWeight="bold" color="text.primary">
+                                            {subscription.plan?.name || 'Standard'}
+                                        </Typography>
+                                        <Typography variant="h6" color="text.secondary">
+                                            {Number(subscription.plan?.price ?? 0).toLocaleString('uz-UZ')} so'm
+                                        </Typography>
+                                        {subscription.plan?.description ? (
+                                            <Typography variant="body2" color="text.secondary" sx={{ pt: 0.5 }}>
+                                                {subscription.plan.description}
+                                            </Typography>
+                                        ) : null}
+                                        <Box sx={{ pt: 1 }}>
+                                            <Button
+                                                variant="outlined"
+                                                color="warning"
+                                                startIcon={<BlockIcon />}
+                                                onClick={() => setCancelOpen(true)}
+                                                disabled={cancelMutation.isPending}
+                                                sx={{ textTransform: 'none', fontWeight: 600 }}
+                                            >
+                                                {cancelMutation.isPending
+                                                    ? 'Bekor qilinmoqda...'
+                                                    : 'Obunani bekor qilish'}
+                                            </Button>
+                                        </Box>
+                                    </Stack>
+                                </Grid>
 
-  {/* TOAST NOTIFICATION */ }
-  <Snackbar
-    open={toast.open}
-    autoHideDuration={6000}
-    onClose={() => setToast(prev => ({ ...prev, open: false }))}
-    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-  >
-    <Alert
-      onClose={() => setToast(prev => ({ ...prev, open: false }))}
-      severity={toast.severity}
-      variant="filled"
-      sx={{ width: '100%', borderRadius: 2 }}
-    >
-      {toast.message}
-    </Alert>
-  </Snackbar>
-    </Box >
-  );
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <Paper
+                                        elevation={0}
+                                        sx={{
+                                            p: 3,
+                                            borderRadius: 2,
+                                            bgcolor: 'background.paper',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        }}
+                                    >
+                                        <Grid container spacing={2}>
+                                            <Grid size={{ xs: 6 }}>
+                                                <Typography color="text.secondary" variant="body2">
+                                                    Status
+                                                </Typography>
+                                                <Chip
+                                                    label="Faol"
+                                                    color="success"
+                                                    size="small"
+                                                    sx={{ mt: 0.5, fontWeight: 'bold' }}
+                                                />
+                                            </Grid>
+
+                                            <Grid size={{ xs: 6 }}>
+                                                <Typography color="text.secondary" variant="body2">
+                                                    Qolgan kunlar
+                                                </Typography>
+                                                <Chip
+                                                    label={`${subscription.daysLeft} kun`}
+                                                    color={
+                                                        subscription.daysLeft > 7
+                                                            ? 'success'
+                                                            : subscription.daysLeft > 0
+                                                              ? 'warning'
+                                                              : 'error'
+                                                    }
+                                                    size="small"
+                                                    sx={{ mt: 0.5, fontWeight: 'bold' }}
+                                                />
+                                            </Grid>
+
+                                            <Grid size={{ xs: 6 }}>
+                                                <Typography color="text.secondary" variant="body2">
+                                                    Boshlanish
+                                                </Typography>
+                                                <Typography fontWeight="medium" variant="body2" sx={{ mt: 0.5 }}>
+                                                    {formatDate(subscription.subStartDate ?? undefined)}
+                                                </Typography>
+                                            </Grid>
+
+                                            <Grid size={{ xs: 6 }}>
+                                                <Typography color="text.secondary" variant="body2">
+                                                    Tugash sanasi
+                                                </Typography>
+                                                <Typography fontWeight="medium" variant="body2" sx={{ mt: 0.5 }}>
+                                                    {formatDate(subscription.subEndDate)}
+                                                </Typography>
+                                            </Grid>
+
+                                            <Grid size={{ xs: 6 }}>
+                                                <Typography color="text.secondary" variant="body2">
+                                                    Muddat
+                                                </Typography>
+                                                <Typography fontWeight="medium" variant="body2" sx={{ mt: 0.5 }}>
+                                                    {subscription.plan?.duration} kun
+                                                </Typography>
+                                            </Grid>
+                                        </Grid>
+                                    </Paper>
+                                </Grid>
+                            </Grid>
+                        ) : (
+                            <Alert severity="warning">
+                                Sizda hech qanday faol obuna yo&apos;q. Quyidan reja tanlang va to&apos;lov qiling.
+                            </Alert>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader
+                        title="Mavjud Rejalar"
+                        subheader="Obuna rejasini tanlang va yangilang"
+                    />
+                    <CardContent>
+                        {isSubActive ? (
+                            <Alert severity="warning" sx={{ mb: 2 }}>
+                                {ACTIVE_SUBSCRIPTION_MESSAGE}
+                            </Alert>
+                        ) : null}
+
+                        <Grid container spacing={2}>
+                            {plans.length > 0 ? (
+                                plans.map((plan: SubscriptionPlan) => {
+                                    const isCurrentPlan =
+                                        isSubActive &&
+                                        subscription?.plan?.id === plan.id;
+                                    const isPurchaseBlocked = isSubActive;
+
+                                    return (
+                                        <Grid key={plan.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                                            <Paper
+                                                elevation={0}
+                                                sx={{
+                                                    p: 3,
+                                                    borderRadius: 2,
+                                                    border: '2px solid',
+                                                    borderColor: isCurrentPlan
+                                                        ? 'primary.main'
+                                                        : 'divider',
+                                                    position: 'relative',
+                                                    transition: 'transform 0.2s, box-shadow 0.2s',
+                                                    opacity: isPurchaseBlocked && !isCurrentPlan ? 0.84 : 1,
+                                                    '&:hover': {
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                                                        borderColor: 'primary.main',
+                                                    },
+                                                }}
+                                            >
+                                                <Stack spacing={2}>
+                                                    {isCurrentPlan ? (
+                                                        <Chip
+                                                            icon={<CheckCircleIcon />}
+                                                            label="Joriy reja"
+                                                            color="primary"
+                                                            size="small"
+                                                            sx={{ alignSelf: 'flex-start' }}
+                                                        />
+                                                    ) : null}
+
+                                                    <Typography variant="h6" fontWeight="bold">
+                                                        {plan.name}
+                                                    </Typography>
+
+                                                    {plan.description ? (
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            {plan.description}
+                                                        </Typography>
+                                                    ) : null}
+
+                                                    <Box>
+                                                        <Typography variant="h4" fontWeight="bold" color="primary">
+                                                            {Number(plan.price ?? 0).toLocaleString('uz-UZ')}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            so&apos;m / {plan.duration} kun
+                                                        </Typography>
+                                                    </Box>
+
+                                                    <Stack spacing={0.5}>
+                                                        <Typography variant="body2">
+                                                            ✓ {plan.duration} kunlik foydalanish
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            ✓ Cheksiz shartnomalar
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            ✓ Barcha modullar mavjud
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            ✓ Texnik yordam
+                                                        </Typography>
+                                                    </Stack>
+
+                                                    <Button
+                                                        variant={isCurrentPlan ? 'outlined' : 'contained'}
+                                                        fullWidth
+                                                        disabled={isCurrentPlan || isPurchaseBlocked}
+                                                        onClick={() => handleSubscribeClick(plan)}
+                                                        startIcon={
+                                                            isCurrentPlan
+                                                                ? <CheckCircleIcon />
+                                                                : !isPurchaseBlocked
+                                                                  ? <CreditCardIcon />
+                                                                  : undefined
+                                                        }
+                                                    >
+                                                        {isCurrentPlan
+                                                            ? 'Joriy reja'
+                                                            : isPurchaseBlocked
+                                                              ? 'Avval bekor qiling'
+                                                              : 'Obuna bo\'lish'}
+                                                    </Button>
+                                                </Stack>
+                                            </Paper>
+                                        </Grid>
+                                    );
+                                })
+                            ) : (
+                                <Grid size={{ xs: 12 }}>
+                                    <Alert severity="info">
+                                        Hech qanday obuna rejasi mavjud emas
+                                    </Alert>
+                                </Grid>
+                            )}
+                        </Grid>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader
+                        title="To'lov Tarixi"
+                        subheader="Barcha o'tgan to'lovlar"
+                    />
+                    <CardContent>
+                        {historyQuery.isError ? (
+                            <Alert severity="error">
+                                {extractApiErrorMessage(
+                                    historyQuery.error,
+                                    "To'lov tarixini yuklab bo'lmadi.",
+                                )}
+                            </Alert>
+                        ) : history.length > 0 ? (
+                            <Paper elevation={0} sx={{ overflow: 'auto' }}>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow sx={{ bgcolor: 'action.hover' }}>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Reja nomi</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Muddat</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                                                Summa
+                                            </TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Boshlanish</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Tugash</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>To'langan sana</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {history.map((item: SubscriptionHistoryItem, idx: number) => {
+                                            const { startDate, endDate, paidDate } = getHistoryDates(item);
+
+                                            return (
+                                                <TableRow key={item.id} hover>
+                                                    <TableCell>{idx + 1}</TableCell>
+                                                    <TableCell sx={{ fontWeight: 500 }}>
+                                                        {item.plan?.name || '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            label={`${item.plan?.duration ?? '?'} kun`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell align="right" sx={{ fontWeight: 500 }}>
+                                                        {Number(item.amount ?? 0).toLocaleString('uz-UZ')} so'm
+                                                    </TableCell>
+                                                    <TableCell>{formatDate(startDate)}</TableCell>
+                                                    <TableCell>{formatDate(endDate)}</TableCell>
+                                                    <TableCell>{formatDateTime(paidDate)}</TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </Paper>
+                        ) : (
+                            <Alert severity="info">To'lov tarixi bo'sh</Alert>
+                        )}
+                    </CardContent>
+                </Card>
+            </Stack>
+
+            <Dialog
+                open={confirmOpen}
+                onClose={() => !payMutation.isPending && setConfirmOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Obunani tasdiqlash</DialogTitle>
+                <DialogContent>
+                    {selectedPlan ? (
+                        <Stack spacing={2} sx={{ pt: 1 }}>
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: 3,
+                                    borderRadius: 2,
+                                    bgcolor: 'grey.50',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                }}
+                            >
+                                <Stack spacing={1}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        {selectedPlan.name}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Muddat: {selectedPlan.duration} kun
+                                    </Typography>
+                                    <Typography variant="h5" fontWeight="bold" color="primary">
+                                        {Number(selectedPlan.price ?? 0).toLocaleString('uz-UZ')} so&apos;m
+                                    </Typography>
+                                </Stack>
+                            </Paper>
+
+                            <Alert severity="info">
+                                To&apos;lov so&apos;rovi backendga faqat tanlangan reja identifikatori bilan yuboriladi.
+                            </Alert>
+                        </Stack>
+                    ) : null}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={() => setConfirmOpen(false)}
+                        disabled={payMutation.isPending}
+                    >
+                        Bekor qilish
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleConfirmPay}
+                        disabled={payMutation.isPending || !selectedPlan || isSubActive}
+                        startIcon={
+                            payMutation.isPending ? (
+                                <CircularProgress size={18} color="inherit" />
+                            ) : (
+                                <CreditCardIcon />
+                            )
+                        }
+                    >
+                        {payMutation.isPending ? 'To\'lov qilinmoqda...' : "To'lash"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={cancelOpen}
+                onClose={() => !cancelMutation.isPending && setCancelOpen(false)}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Obunani bekor qilish</DialogTitle>
+                <DialogContent>
+                    <Typography color="text.secondary">
+                        Joriy obunani bekor qilgach, yangi tarif sotib olish imkoniyati ochiladi.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={() => setCancelOpen(false)}
+                        disabled={cancelMutation.isPending}
+                    >
+                        Ortga
+                    </Button>
+                    <Button
+                        color="warning"
+                        variant="contained"
+                        onClick={() => cancelMutation.mutate()}
+                        disabled={cancelMutation.isPending}
+                        startIcon={
+                            cancelMutation.isPending ? (
+                                <CircularProgress size={18} color="inherit" />
+                            ) : (
+                                <BlockIcon />
+                            )
+                        }
+                    >
+                        {cancelMutation.isPending ? 'Bekor qilinmoqda...' : 'Bekor qilish'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Snackbar
+                open={toast.open}
+                autoHideDuration={5000}
+                onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    severity={toast.severity}
+                    variant="filled"
+                    onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+                    sx={{ width: '100%' }}
+                >
+                    {toast.message}
+                </Alert>
+            </Snackbar>
+        </Box>
+    );
 }

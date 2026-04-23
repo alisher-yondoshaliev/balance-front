@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useThemeStore } from '../../store/theme.store';
 import { useLanguageStore } from '../../store/language.store';
 import { Moon, Sun, Globe } from 'lucide-react';
@@ -13,7 +12,6 @@ import Footer from './sections/Footer';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const { mode, toggleTheme } = useThemeStore();
   const { language, toggleLanguage } = useLanguageStore();
 

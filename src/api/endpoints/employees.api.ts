@@ -75,7 +75,7 @@ export const employeesApi = {
      * PATCH /api/users/:id/status
      * Update employee status
      */
-    updateEmployeeStatus: async (id: string | number, status: 'active' | 'inactive') => {
+    updateEmployeeStatus: async (id: string | number, status: 'ACTIVE' | 'INACTIVE') => {
         console.log(`[employeesApi] PATCH /users/${id}/status`, { status });
         return api.patch(`/users/${id}/status`, { status });
     },

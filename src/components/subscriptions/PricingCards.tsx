@@ -66,7 +66,7 @@ export function PricingCards({
                             }`}
                     >
                         {/* Popular badge */}
-                        {plan.isPopular && (
+                         {!!((plan as unknown as Record<string, unknown>).isPopular) && (
                             <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-bl-lg text-sm font-semibold">
                                 Mashhur
                             </div>
@@ -84,8 +84,8 @@ export function PricingCards({
                             <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
 
                             {/* Description */}
-                            {plan.description && (
-                                <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
+                             {plan.description && (
+                                 <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
                             )}
 
                             {/* Price */}
@@ -96,29 +96,23 @@ export function PricingCards({
                                     </span>
                                     <span className="text-gray-600 text-sm">so'm</span>
                                 </div>
-                                {plan.duration && (
-                                    <p className="text-gray-500 text-sm mt-1">
-                                        {plan.duration} kun uchun
-                                    </p>
-                                )}
+                                <p className="text-gray-500 text-sm mt-1">
+                                    {plan.duration} kun uchun
+                                </p>
                             </div>
 
-                            {/* Features list */}
+                            {/* Plan info */}
                             <div className="mb-6 flex-1">
-                                <h4 className="text-sm font-semibold text-gray-900 mb-3">Imkoniyatlar:</h4>
-                                <ul className="space-y-3">
-                                    {plan.features && plan.features.length > 0 ? (
-                                        plan.features.map((feature, idx) => (
-                                            <li key={idx} className="flex items-start gap-3">
-                                                <Check className="text-green-500 flex-shrink-0 mt-0.5" size={18} />
-                                                <span className="text-gray-700 text-sm">{feature}</span>
-                                            </li>
-                                        ))
-                                    ) : (
-                                        <li className="text-gray-500 text-sm italic">
-                                            Imkoniyatlar ko'rsatilmadi
-                                        </li>
-                                    )}
+                                <h4 className="text-sm font-semibold text-gray-900 mb-3">Tarif ma'lumoti:</h4>
+                                <ul className="space-y-2">
+                                    <li className="text-gray-700 text-sm flex items-center gap-2">
+                                        <Check className="text-green-500 flex-shrink-0" size={16} />
+                                        <span>{plan.duration} kun uchun kirish</span>
+                                    </li>
+                                    <li className="text-gray-700 text-sm flex items-center gap-2">
+                                        <Check className="text-green-500 flex-shrink-0" size={16} />
+                                        <span>Status: {plan.isActive ? 'Faol' : 'Nofaol'}</span>
+                                    </li>
                                 </ul>
                             </div>
 

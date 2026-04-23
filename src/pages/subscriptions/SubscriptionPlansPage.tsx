@@ -27,7 +27,7 @@ export const SubscriptionPlansPage: React.FC = () => {
     const hasActiveSubscription = currentSubscriptionQuery.data?.status === 'active';
     const activeSubscriptionEndDate = currentSubscriptionQuery.data?.endDate;
     const currentSubscription = currentSubscriptionQuery.data;
-    const paymentHistory = historyQuery.data?.data || [];
+    const paymentHistory = historyQuery.data || [];
 
     // Add error boundary for render errors
     React.useEffect(() => {
@@ -43,7 +43,7 @@ export const SubscriptionPlansPage: React.FC = () => {
     // Safe data extraction with memoization
     const plans = useMemo(() => {
         try {
-            const data = plansQuery.data?.data;
+            const data = plansQuery.data;
             console.log('[SubscriptionPlansPage] Plans data:', {
                 exists: !!data,
                 isArray: Array.isArray(data),

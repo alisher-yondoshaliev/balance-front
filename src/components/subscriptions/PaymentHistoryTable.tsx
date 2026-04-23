@@ -1,9 +1,9 @@
 import { AlertCircle } from 'lucide-react';
 import dayjs from 'dayjs';
-import type { SubscriptionHistory } from '../../api/endpoints/subscriptions.api';
+import type { PaymentHistory } from '../../api/endpoints/subscriptions.api';
 
 interface PaymentHistoryTableProps {
-    history: SubscriptionHistory[];
+    history: PaymentHistory[];
     isLoading?: boolean;
 }
 
@@ -88,9 +88,6 @@ export function PaymentHistoryTable({
                         ) : history && history.length > 0 ? (
                             history.map((payment) => {
                                 const paymentDate = dayjs(payment.paymentDate);
-                                const startDate = dayjs(payment.startDate);
-                                const endDate = dayjs(payment.endDate);
-                                const duration = endDate.diff(startDate, 'day');
 
                                 return (
                                     <tr
@@ -127,25 +124,12 @@ export function PaymentHistoryTable({
                                             <p className="text-sm text-gray-500">so'm</p>
                                         </td>
 
-                                        {/* Duration */}
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    {startDate.format('DD.MM')} - {endDate.format('DD.MM')}
-                                                </p>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {duration} kun
-                                                </p>
-                                            </div>
-                                        </td>
-
                                         {/* Status */}
                                         <td className="px-6 py-4">
                                             <StatusBadge status={payment.status} />
                                         </td>
                                     </tr>
-                                );
-                            })
+                                );                            })
                         ) : (
                             <tr>
                                 <td colSpan={5} className="px-6 py-12 text-center">

@@ -68,7 +68,7 @@ export const DashboardSubscriptionPage: React.FC = () => {
 
                 {/* Subscription Info */}
                 <SubscriptionInfo
-                    subscription={subscriptionQuery.data || null}
+                    subscription={(subscriptionQuery.data as unknown as import('../../types/subscription.types').CurrentSubscription) || null}
                     isLoading={subscriptionQuery.isLoading}
                     onUpgrade={() => navigate('/subscriptions/plans')}
                 />

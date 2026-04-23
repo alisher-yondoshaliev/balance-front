@@ -20,8 +20,8 @@ export const EMPLOYEE_FILTER_OPTIONS = {
     // Status - UI label -> Backend value
     status: [
         { label: 'Hammasi', value: '' },
-        { label: 'Faol', value: 'active' },
-        { label: 'Faol emas', value: 'inactive' },
+        { label: 'Faol', value: 'ACTIVE' },
+        { label: 'Faol emas', value: 'INACTIVE' },
     ],
 
     // Role - UI label -> Backend value (UPPERCASE)
@@ -54,8 +54,8 @@ export const getFilterLabel = (
 /**
  * Get status display label
  */
-export const getStatusLabel = (status: 'active' | 'inactive'): string => {
-    return status === 'active' ? 'Faol' : 'Faol emas';
+export const getStatusLabel = (status?: string): string => {
+    return status?.toUpperCase() === 'ACTIVE' ? 'Faol' : 'Faol emas';
 };
 
 /**
