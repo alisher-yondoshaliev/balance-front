@@ -51,9 +51,6 @@ type HistoryWithAliases = SubscriptionHistoryItem & {
     createdAt?: string;
 };
 
-const formatCurrency = (amount?: number) =>
-    Number(amount ?? 0).toLocaleString('uz-UZ');
-
 const formatDate = (value?: string) =>
     value ? dayjs(value).format('DD.MM.YYYY') : '—';
 

@@ -6,15 +6,15 @@
 export interface SubscriptionPlan {
     id: string;
     name: string;
-    description?: string;
+    description?: string | null;
     price: number;
     duration: number; // in days
-    features: string[];
-    isActive: boolean;
+    features?: string[];
+    isActive?: boolean;
     maxUsers?: number;
     maxStorage?: number; // in GB
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface CreatePlanInput {

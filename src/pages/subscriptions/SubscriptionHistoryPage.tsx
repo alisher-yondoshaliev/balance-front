@@ -26,7 +26,7 @@ import {
 import { useGetSubscriptionHistory, useGetCurrentSubscription } from '../../hooks/useSubscriptions';
 import { useAuthStore } from '../../store/auth.store';
 import dayjs from 'dayjs';
-import type { SubscriptionHistory } from '../../types/subscription.types';
+import type { SubscriptionHistoryItem } from '../../api/endpoints/subscriptions.api';
 
 export const SubscriptionHistoryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -110,6 +110,9 @@ export const SubscriptionHistoryPage: React.FC = () => {
 
     const currentSubscription = currentQuery.data;
     const history = historyQuery.data || [];
+    const currentStatus = currentSubscription?.status ?? (currentSubscription?.isActive ? 'active' : 'expired');
+    const currentStartDate = currentSubscription?.startDate ?? currentSubscription?.subStartDate ?? null;
+    const currentEndDate = currentSubscription?.endDate ?? currentSubscription?.subEndDate ?? null;
 
     console.log('[SubscriptionHistoryPage] Rendering with:', {
         hasCurrentSubscription: !!currentSubscription,
@@ -155,10 +158,10 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                             Status
                                         </Typography>
                                         <Chip
-                                            label={currentSubscription.status.charAt(0).toUpperCase() + currentSubscription.status.slice(1)}
+                                            label={currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
                                             sx={{
-                                                bgcolor: currentSubscription.status === 'active' ? '#4caf50' : undefined,
-                                                color: currentSubscription.status === 'active' ? '#fff' : undefined,
+                                                bgcolor: currentStatus === 'active' ? '#4caf50' : undefined,
+                                                color: currentStatus === 'active' ? '#fff' : undefined,
                                             }}
                                             variant="filled"
                                         />
@@ -170,7 +173,7 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                             Start Date
                                         </Typography>
                                         <Typography variant="body1">
-                                            {currentSubscription.startDate ? dayjs(currentSubscription.startDate).format('MMM DD, YYYY') : 'N/A'}
+                                            {currentStartDate ? dayjs(currentStartDate).format('MMM DD, YYYY') : 'N/A'}
                                         </Typography>
                                     </Box>
 
@@ -180,7 +183,7 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                             End Date
                                         </Typography>
                                         <Typography variant="body1">
-                                            {currentSubscription.endDate ? dayjs(currentSubscription.endDate).format('MMM DD, YYYY') : 'N/A'}
+                                            {currentEndDate ? dayjs(currentEndDate).format('MMM DD, YYYY') : 'N/A'}
                                         </Typography>
                                     </Box>
 
@@ -201,7 +204,7 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                             Days Remaining
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
-                                            {currentSubscription.endDate ? Math.max(0, dayjs(currentSubscription.endDate).diff(dayjs(), 'day')) : 0} days
+                                            {currentEndDate ? Math.max(0, dayjs(currentEndDate).diff(dayjs(), 'day')) : 0} days
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -241,9 +244,9 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                     <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
                                         $
                                         {history
-                                            .filter((h: SubscriptionHistory) => h.status === 'success')
-                                            .reduce((sum: number, h: SubscriptionHistory) => {
-                                                const amount = typeof h.amount === 'string' ? parseFloat(h.amount) : h.amount;
+                                            .filter((h: SubscriptionHistoryItem) => h.status === 'success')
+                                            .reduce((sum: number, h: SubscriptionHistoryItem) => {
+                                                const amount = Number(h.amount ?? 0);
                                                 return sum + (isNaN(amount) ? 0 : amount);
                                             }, 0)
                                             .toFixed(2)}
@@ -258,7 +261,7 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                         Successful Payments
                                     </Typography>
                                     <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
-                                        {history.filter((h: SubscriptionHistory) => h.status === 'success').length}
+                                        {history.filter((h: SubscriptionHistoryItem) => h.status === 'success').length}
                                     </Typography>
                                 </CardContent>
                             </Card>
@@ -282,7 +285,7 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                         Failed Payments
                                     </Typography>
                                     <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#f44336' }}>
-                                        {history.filter((h: SubscriptionHistory) => h.status === 'failed').length}
+                                        {history.filter((h: SubscriptionHistoryItem) => h.status === 'failed').length}
                                     </Typography>
                                 </CardContent>
                             </Card>
@@ -303,19 +306,22 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {history.map((payment: SubscriptionHistory, idx: number) => (
+                                    {history.map((payment: SubscriptionHistoryItem, idx: number) => {
+                                        const paymentStatus = payment.status ?? 'pending';
+
+                                        return (
                                         <TableRow key={idx} hover>
                                             <TableCell>{dayjs(payment.paymentDate).format('MMM DD, YYYY')}</TableCell>
                                             <TableCell>{payment.plan?.name || 'Unknown'}</TableCell>
                                             <TableCell sx={{ fontWeight: 'bold' }}>
-                                                ${typeof payment.amount === 'string' ? parseFloat(payment.amount).toFixed(2) : payment.amount.toFixed(2)}
+                                                {Number(payment.amount ?? 0).toFixed(2)}
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                                    label={paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
                                                     sx={{
-                                                        bgcolor: payment.status === 'success' ? '#4caf50' : payment.status === 'failed' ? '#f44336' : undefined,
-                                                        color: (payment.status === 'success' || payment.status === 'failed') ? '#fff' : undefined,
+                                                        bgcolor: paymentStatus === 'success' ? '#4caf50' : paymentStatus === 'failed' ? '#f44336' : undefined,
+                                                        color: (paymentStatus === 'success' || paymentStatus === 'failed') ? '#fff' : undefined,
                                                     }}
                                                     variant="filled"
                                                     size="small"
@@ -332,11 +338,12 @@ export const SubscriptionHistoryPage: React.FC = () => {
                                                         borderRadius: 1,
                                                     }}
                                                 >
-                                                    {payment.transactionId.slice(0, 12)}...
+                                                    {payment.transactionId ? `${payment.transactionId.slice(0, 12)}...` : '—'}
                                                 </Typography>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         </TableContainer>
