@@ -48,7 +48,7 @@ export const PlanModal: React.FC<PlanModalProps> = ({
         if (plan) {
             reset({
                 name: plan.name,
-                description: plan.description,
+                description: plan.description ?? undefined,
                 price: plan.price,
                 duration: plan.duration,
                 features: plan.features,

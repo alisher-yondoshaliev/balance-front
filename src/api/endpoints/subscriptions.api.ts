@@ -6,7 +6,12 @@ export interface SubscriptionPlan {
     price: number;
     duration: number;
     description?: string | null;
-    isActive: boolean;
+    isActive?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    features?: string[];
+    maxUsers?: number;
+    maxStorage?: number;
 }
 
 export interface CurrentSubscription {
@@ -16,6 +21,10 @@ export interface CurrentSubscription {
     isActive: boolean;
     daysLeft: number;
     subStartDate?: string | null;
+    status?: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    autoRenew?: boolean;
 }
 
 export interface SubscriptionHistoryItem {
@@ -28,6 +37,13 @@ export interface SubscriptionHistoryItem {
     status?: string;
     subStartDate?: string;
     subEndDate?: string;
+    startDate?: string;
+    endDate?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    transactionId?: string;
+    currency?: string;
+    userId?: string;
 }
 
 export interface PaymentInput {
@@ -36,6 +52,20 @@ export interface PaymentInput {
 
 export interface SubscriptionPaymentResponse {
     message?: string;
+    paymentUrl?: string;
+    url?: string;
+    redirectUrl?: string;
+    payment?: {
+        id?: string;
+        amount?: number | string;
+        startDate?: string;
+        endDate?: string;
+    };
+    plan?: {
+        id?: string;
+        name?: string;
+        duration?: number;
+    };
     [key: string]: unknown;
 }
 
@@ -53,6 +83,10 @@ export type SubscriptionHistoryApiResponse =
     | { items: SubscriptionHistoryItem[] }
     | SubscriptionHistoryItem[];
 
+export type SubscriptionItem = CurrentSubscription;
+export type CurrentSubscriptionResponse = CurrentSubscriptionApiResponse;
+export type PaymentHistory = SubscriptionHistoryItem;
+
 export const normalizeCurrentSubscription = (
     data: CurrentSubscriptionApiResponse,
 ): CurrentSubscription | null => {
@@ -61,10 +95,27 @@ export const normalizeCurrentSubscription = (
     }
 
     if ('subscription' in data) {
-        return data.subscription ?? null;
+        const subscription = data.subscription ?? null;
+        if (!subscription) {
+            return null;
+        }
+
+        return {
+            ...subscription,
+            startDate: subscription.startDate ?? subscription.subStartDate ?? null,
+            endDate: subscription.endDate ?? subscription.subEndDate ?? null,
+            status:
+                subscription.status ??
+                (subscription.isActive ? 'active' : 'expired'),
+        };
     }
 
-    return data;
+    return {
+        ...data,
+        startDate: data.startDate ?? data.subStartDate ?? null,
+        endDate: data.endDate ?? data.subEndDate ?? null,
+        status: data.status ?? (data.isActive ? 'active' : 'expired'),
+    };
 };
 
 export const normalizeSubscriptionHistory = (

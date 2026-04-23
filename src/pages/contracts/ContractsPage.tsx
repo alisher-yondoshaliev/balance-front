@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Box, Typography, Button, Table, TableBody, TableCell,
-    TableHead, TableRow, Paper, Chip, TextField,
+    Box, Button, Table, TableBody, TableCell,
+    TableHead, TableRow, Chip, TextField,
     CircularProgress, Alert, InputAdornment, Select,
     MenuItem, FormControl, InputLabel,
 } from '@mui/material';
@@ -17,7 +17,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { contractsApi } from '../../api';
 import { useMarketStore } from '../../store/market.store';
-import type { Contract, ContractStatus } from '../../types';
+import type { Contract } from '../../types';
 import dayjs from 'dayjs';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
@@ -53,7 +53,7 @@ const statusColors: Record<ContractStatusKey, 'success' | 'default' | 'warning' 
     terminated: 'error',
 };
 
-const statusIcons: Record<ContractStatusKey, JSX.Element> = {
+const statusIcons: Record<ContractStatusKey, ReactElement> = {
     active: <CheckCircleIcon fontSize="small" />,
     completed: <TaskAltIcon fontSize="small" />,
     overdue: <ScheduleIcon fontSize="small" />,

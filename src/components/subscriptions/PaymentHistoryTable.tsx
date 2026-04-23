@@ -8,7 +8,7 @@ interface PaymentHistoryTableProps {
 }
 
 // Status badge styling
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status?: string }) {
     const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
         active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Faol' },
         inactive: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Nofaol' },
@@ -16,7 +16,8 @@ function StatusBadge({ status }: { status: string }) {
         cancelled: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Bekor qilingan' },
     };
 
-    const config = statusConfig[status.toLowerCase()] || statusConfig.inactive;
+    const normalizedStatus = status?.toLowerCase() ?? 'inactive';
+    const config = statusConfig[normalizedStatus] || statusConfig.inactive;
 
     return (
         <span

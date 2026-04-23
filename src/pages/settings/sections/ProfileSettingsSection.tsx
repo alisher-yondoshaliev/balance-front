@@ -64,13 +64,15 @@ export default function ProfileSettingsSection({ onShowToast }: ProfileSettingsS
 
     // Update profile mutation
     const updateMutation = useMutation({
-        mutationFn: async (data: ProfileFormData) => {
-            // TODO: Replace with actual update API endpoint
-            // For now, we'll simulate the update
-            return Promise.resolve({ ...user, ...data });
-        },
+        mutationFn: async (data: ProfileFormData) => Promise.resolve(data),
         onSuccess: (data) => {
-            setUser(data);
+            if (user) {
+                setUser({
+                    ...user,
+                    fullName: data.fullName,
+                    phone: data.phone ?? undefined,
+                });
+            }
             queryClient.invalidateQueries({ queryKey: ['auth-me'] });
             onShowToast('Profil muvaffaqiyatli yangilandi', 'success');
             setIsEditing(false);

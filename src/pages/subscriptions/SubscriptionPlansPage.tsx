@@ -10,7 +10,10 @@ import { useGetPlans, useMakePayment, useGetCurrentSubscription, useGetSubscript
 import { PlanCard } from '../../components/subscriptions/PlanCard';
 import { useAuthStore } from '../../store/auth.store';
 import dayjs from 'dayjs';
-import type { SubscriptionPlan } from '../../types/subscription.types';
+import type {
+    SubscriptionHistoryItem,
+    SubscriptionPlan,
+} from '../../api/endpoints/subscriptions.api';
 
 export const SubscriptionPlansPage: React.FC = () => {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -24,8 +27,8 @@ export const SubscriptionPlansPage: React.FC = () => {
     const historyQuery = useGetSubscriptionHistory(undefined, !!user?.id);
 
     // Check if user has active subscription
-    const hasActiveSubscription = currentSubscriptionQuery.data?.status === 'active';
-    const activeSubscriptionEndDate = currentSubscriptionQuery.data?.endDate;
+    const hasActiveSubscription = currentSubscriptionQuery.data?.isActive === true;
+    const activeSubscriptionEndDate = currentSubscriptionQuery.data?.subEndDate;
     const currentSubscription = currentSubscriptionQuery.data;
     const paymentHistory = historyQuery.data || [];
 
@@ -62,10 +65,10 @@ export const SubscriptionPlansPage: React.FC = () => {
             console.error('[SubscriptionPlansPage] Error extracting plans:', error);
             return [];
         }
-    }, [plansQuery.data?.data]);
+    }, [plansQuery.data]);
 
     // Handle plan selection with error handling
-    const handleSelectPlan = async (plan: SubscriptionPlan | undefined) => {
+    const handleSelectPlan = async (plan: SubscriptionPlan) => {
         if (!plan?.id) {
             console.error('[SubscriptionPlansPage] Invalid plan:', plan);
             setRenderError('Invalid plan selected');
@@ -81,7 +84,8 @@ export const SubscriptionPlansPage: React.FC = () => {
 
         setSelectedPlanId(plan.id);
         try {
-            const result = await paymentMutation.mutateAsync({ planId: plan.id });
+            const response = await paymentMutation.mutateAsync({ planId: plan.id });
+            const result = response.data;
             console.log('[SubscriptionPlansPage] Payment response:', {
                 fullResponse: result,
                 hasPaymentUrl: !!result?.paymentUrl,
@@ -104,15 +108,16 @@ export const SubscriptionPlansPage: React.FC = () => {
             }
 
             // Handle redirect URLs
-            const paymentUrl = result?.paymentUrl || result?.url || result?.redirectUrl;
+            const paymentUrl =
+                response.data?.paymentUrl ||
+                response.data?.url ||
+                response.data?.redirectUrl;
 
             if (paymentUrl) {
                 console.log('[SubscriptionPlansPage] Redirecting to payment URL:', paymentUrl);
                 window.location.href = paymentUrl;
             } else {
-                console.warn('[SubscriptionPlansPage] No payment URL in response:', result);
-                console.warn('[SubscriptionPlansPage] Response keys:', Object.keys(result || {}));
-                setRenderError(`Payment initiated but no redirect URL. Response: ${JSON.stringify(result)}`);
+                console.log('[SubscriptionPlansPage] Payment completed without redirect URL');
             }
         } catch (error) {
             console.error('[SubscriptionPlansPage] Payment initiation failed:', error);
@@ -236,7 +241,7 @@ export const SubscriptionPlansPage: React.FC = () => {
                                         Expires
                                     </Typography>
                                     <Typography variant="body1">
-                                        {currentSubscription.endDate ? dayjs(currentSubscription.endDate).format('MMM DD, YYYY') : 'N/A'}
+                                        {currentSubscription.subEndDate ? dayjs(currentSubscription.subEndDate).format('MMM DD, YYYY') : 'N/A'}
                                     </Typography>
                                 </Box>
                                 <Box>
@@ -244,7 +249,7 @@ export const SubscriptionPlansPage: React.FC = () => {
                                         Days Remaining
                                     </Typography>
                                     <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
-                                        {currentSubscription.endDate ? Math.max(0, dayjs(currentSubscription.endDate).diff(dayjs(), 'day')) : 0} days
+                                        {currentSubscription.subEndDate ? Math.max(0, dayjs(currentSubscription.subEndDate).diff(dayjs(), 'day')) : 0} days
                                     </Typography>
                                 </Box>
                             </Box>
@@ -269,7 +274,7 @@ export const SubscriptionPlansPage: React.FC = () => {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {paymentHistory.slice(0, 5).map((payment: any, idx: number) => (
+                                    {paymentHistory.slice(0, 5).map((payment: SubscriptionHistoryItem, idx: number) => (
                                         <TableRow key={idx} hover>
                                             <TableCell>
                                                 <Typography variant="body2">
@@ -282,7 +287,7 @@ export const SubscriptionPlansPage: React.FC = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                                    label={payment.status ? payment.status.charAt(0).toUpperCase() + payment.status.slice(1) : 'Pending'}
                                                     size="small"
                                                     sx={{
                                                         bgcolor: payment.status === 'success' ? '#4caf50' : payment.status === 'failed' ? '#f44336' : '#2196f3',
@@ -312,12 +317,7 @@ export const SubscriptionPlansPage: React.FC = () => {
                             gap: 3,
                         }}
                     >
-                        {plans.map((plan: SubscriptionPlan | undefined) => {
-                            if (!plan?.id) {
-                                console.warn('[SubscriptionPlansPage] Skipping invalid plan:', plan);
-                                return null;
-                            }
-
+                        {plans.map((plan) => {
                             return (
                                 <Box key={plan.id}>
                                     <PlanCard

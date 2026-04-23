@@ -84,7 +84,11 @@ export default function MarketSettingsSection({ onShowToast }: MarketSettingsSec
     const updateMarketMutation = useMutation({
         mutationFn: async (data: MarketFormData) => {
             if (!selectedMarket?.id) throw new Error('Market ID is missing');
-            return marketsApi.update(selectedMarket.id, data);
+            return marketsApi.update(selectedMarket.id, {
+                ...data,
+                address: data.address ?? undefined,
+                phone: data.phone ?? undefined,
+            });
         },
         onSuccess: (response) => {
             const updatedMarket = response.data;
@@ -101,7 +105,11 @@ export default function MarketSettingsSection({ onShowToast }: MarketSettingsSec
     });
 
     const onSubmit = (data: MarketFormData) => {
-        updateMarketMutation.mutate(data);
+        updateMarketMutation.mutate({
+            ...data,
+            address: data.address ?? undefined,
+            phone: data.phone ?? undefined,
+        });
     };
 
     if (isLoadingMarkets) {
@@ -145,6 +153,9 @@ export default function MarketSettingsSection({ onShowToast }: MarketSettingsSec
             </Card>
         );
     }
+
+    const isMarketActive =
+        String(selectedMarket?.status ?? '').toUpperCase() === 'ACTIVE';
 
     return (
         <Card>
@@ -235,9 +246,9 @@ export default function MarketSettingsSection({ onShowToast }: MarketSettingsSec
                                         </Typography>
                                         {selectedMarket.status && (
                                             <Chip
-                                                label={selectedMarket.status === 'ACTIVE' ? 'Faol' : 'Faol emas'}
+                                                label={isMarketActive ? 'Faol' : 'Faol emas'}
                                                 size="small"
-                                                color={selectedMarket.status === 'ACTIVE' ? 'success' : 'default'}
+                                                color={isMarketActive ? 'success' : 'default'}
                                                 variant="outlined"
                                             />
                                         )}

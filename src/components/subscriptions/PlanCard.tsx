@@ -22,7 +22,7 @@ import {
 import { Check as CheckIcon, Info } from 'lucide-react';
 import { PlanDetailDialog } from './PlanDetailDialog';
 import { getPlanFeatures } from '../../utils/planFeatures';
-import type { SubscriptionPlan } from '../../types/subscription.types';
+import type { SubscriptionPlan } from '../../api/endpoints/subscriptions.api';
 
 interface PlanCardProps {
     plan: SubscriptionPlan;
@@ -206,7 +206,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
             {/* Detail Dialog - Fetches plan details from GET /api/subscriptions/plans/{id} */}
             <PlanDetailDialog
                 open={showDetails}
-                planId={plan.id}
+                plan={plan}
                 onClose={() => setShowDetails(false)}
                 onSubscribe={isDisabled ? undefined : onSelect}
                 isSubscribing={isLoading}

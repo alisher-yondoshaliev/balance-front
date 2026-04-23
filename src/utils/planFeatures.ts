@@ -3,7 +3,7 @@
  * Helper functions for subscription plan features
  */
 
-import type { SubscriptionPlan } from '../types/subscription.types';
+import type { SubscriptionPlan } from '../api/endpoints/subscriptions.api';
 
 /**
  * Get features for a plan with descriptions
